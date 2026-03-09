@@ -1,0 +1,17 @@
+{
+  "entryPoints": [
+    "src/types/tournament.ts",
+    "src/services/tournament.service.ts",
+    "src/api/tournaments.ts",
+    "src/components/TournamentCard.tsx"
+  ],
+  "out": "docs_output",
+  "name": "Система учёта футбольных турниров — Документация разработчика",
+  "includeVersion": true,
+  "excludePrivate": true,
+  "theme": "default",
+  "readme": "none",
+  "skipErrorChecking": true,
+  "entryPointStrategy": "expand",
+  "tsconfig": "tsconfig.json"
+}
