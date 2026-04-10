@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { AccessGuard } from "@/components/access-guard";
 import { DashboardOverview } from "@/components/dashboard-overview";
+import { DashboardRolePanels } from "@/components/dashboard-role-panels";
 import { LayoutShell } from "@/components/layout-shell";
 import { useAuth } from "@/components/auth-provider";
 
@@ -39,6 +40,7 @@ export default function DashboardPage() {
       <main className="page-layout">
         <AccessGuard>
           <DashboardOverview />
+          <DashboardRolePanels />
           <section className="card">
             <div className="section-head">
               <h2 className="section-title">Быстрые действия</h2>

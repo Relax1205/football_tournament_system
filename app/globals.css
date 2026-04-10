@@ -50,6 +50,12 @@ select {
   font: inherit;
 }
 
+button,
+input,
+select {
+  outline: none;
+}
+
 .page-shell {
   width: min(var(--max-width), calc(100% - 32px));
   margin: 0 auto;
@@ -373,6 +379,11 @@ select {
   grid-column: 1 / -1;
 }
 
+.field-error {
+  color: #9f301b;
+  font-size: 13px;
+}
+
 .page-layout {
   display: grid;
   gap: 22px;
@@ -397,6 +408,14 @@ select {
   background: rgba(170, 52, 31, 0.1);
   border: 1px solid rgba(170, 52, 31, 0.14);
   color: #9f301b;
+}
+
+.message-success {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(29, 125, 82, 0.12);
+  border: 1px solid rgba(29, 125, 82, 0.18);
+  color: var(--success);
 }
 
 .empty-state {
@@ -427,6 +446,39 @@ select {
   line-height: 1;
 }
 
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.toolbar-input {
+  min-height: 48px;
+  min-width: min(320px, 100%);
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(24, 33, 38, 0.12);
+  background: #fff;
+}
+
+.inline-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.list-item-spread {
+  justify-content: space-between;
+}
+
+.table-muted {
+  color: var(--muted);
+  font-size: 14px;
+}
+
 @media (max-width: 960px) {
   .hero,
   .grid-3,
@@ -442,6 +494,11 @@ select {
   .header-user {
     width: 100%;
     flex-wrap: wrap;
+  }
+
+  .list-item-spread {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 
