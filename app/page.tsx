@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { LayoutShell } from "@/components/layout-shell";
-import { frontendScope, matches, tournaments } from "@/components/mock-data";
+import {
+  frontendScope,
+  initialMatches,
+  initialTournaments,
+} from "@/components/mock-data";
 
 export default function HomePage() {
   return (
@@ -96,13 +100,13 @@ export default function HomePage() {
               <h2 className="section-title">Активные турниры</h2>
             </div>
             <ul className="list">
-              {tournaments.map((tournament) => (
+              {initialTournaments.map((tournament) => (
                 <li key={tournament.id} className="list-item">
                   <div>
                     <strong>{tournament.name}</strong>
                     {tournament.format} · {tournament.teams} команд
                     <br />
-                    {tournament.dates}
+                    {tournament.startDate} - {tournament.endDate}
                   </div>
                   <span className="pill warning">{tournament.status}</span>
                 </li>
@@ -115,7 +119,7 @@ export default function HomePage() {
               <h2 className="section-title">Ближайшие матчи</h2>
             </div>
             <ul className="list">
-              {matches.map((match) => (
+              {initialMatches.map((match) => (
                 <li key={match.id} className="list-item">
                   <div>
                     <strong>
