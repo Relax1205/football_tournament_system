@@ -56,3 +56,6 @@ coverage/
 *.pid
 *.seed
 *.tgz
+
+# Local accidental nested repo copy
+/football_tournament_system/
