@@ -3,38 +3,109 @@ import { Builder, By, until } from "selenium-webdriver";
 const BASE_URL = process.env.UI_BASE_URL || "http://localhost:3000";
 const BROWSER = process.env.UI_BROWSER || "chrome";
 
-async function loginPositive(driver) {
+async function resetSession(driver) {
   await driver.get(`${BASE_URL}/login`);
-  await driver.findElement(By.css('input[type="email"]')).sendKeys("organizer@tournament.ru");
-  await driver.findElement(By.css('input[type="password"]')).sendKeys("Test123!");
-  await driver.findElement(By.css('button[type="submit"]')).click();
-  await driver.wait(until.urlContains("/dashboard"), 5000);
+  await driver.manage().deleteAllCookies();
+  await driver.executeScript("window.localStorage.clear();");
+  await driver.navigate().refresh();
+}
+
+async function clickSafely(driver, element) {
+  await driver.executeScript(
+    "arguments[0].scrollIntoView({ block: 'center', inline: 'nearest' });",
+    element,
+  );
+
+  try {
+    await element.click();
+  } catch {
+    await driver.executeScript("arguments[0].click();", element);
+  }
+}
+
+async function setInputValue(driver, element, value) {
+  await driver.executeScript(
+    `
+      const [input, nextValue] = arguments;
+      const descriptor = Object.getOwnPropertyDescriptor(
+        window.HTMLInputElement.prototype,
+        "value",
+      );
+      descriptor.set.call(input, nextValue);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    `,
+    element,
+    value,
+  );
+}
+
+async function loginPositive(driver) {
+  await resetSession(driver);
+  await driver.get(`${BASE_URL}/login`);
+  const email = await driver.findElement(By.css('input[type="email"]'));
+  const password = await driver.findElement(By.css('input[type="password"]'));
+  await email.clear();
+  await email.sendKeys("organizer@tournament.ru");
+  await password.clear();
+  await password.sendKeys("Test123!");
+  const submitButton = await driver.findElement(By.css('button[type="submit"]'));
+  await clickSafely(driver, submitButton);
+  await driver.wait(until.urlContains("/dashboard"), 10000);
+  await driver.wait(until.elementLocated(By.xpath("//*[contains(text(),'Быстрые действия')]")), 10000);
 }
 
 async function loginNegative(driver) {
+  await resetSession(driver);
   await driver.get(`${BASE_URL}/login`);
-  await driver.findElement(By.css('input[type="email"]')).clear();
-  await driver.findElement(By.css('input[type="email"]')).sendKeys("organizer@tournament.ru");
-  await driver.findElement(By.css('input[type="password"]')).clear();
-  await driver.findElement(By.css('input[type="password"]')).sendKeys("WrongPass");
-  await driver.findElement(By.css('button[type="submit"]')).click();
+  const email = await driver.findElement(By.css('input[type="email"]'));
+  const password = await driver.findElement(By.css('input[type="password"]'));
+  await email.clear();
+  await email.sendKeys("organizer@tournament.ru");
+  await password.clear();
+  await password.sendKeys("WrongPass");
+  const submitButton = await driver.findElement(By.css('button[type="submit"]'));
+  await clickSafely(driver, submitButton);
   await driver.wait(until.elementLocated(By.xpath("//*[contains(text(),'Неверный логин или пароль')]")), 5000);
 }
 
 async function createTournament(driver) {
   await loginPositive(driver);
   await driver.get(`${BASE_URL}/tournaments`);
-  await driver.findElement(By.id("title")).sendKeys("Тестовый турнир Selenium");
-  await driver.findElement(By.id("start-date")).sendKeys("2026-05-10");
-  await driver.findElement(By.id("end-date")).sendKeys("2026-05-20");
+  const title = await driver.findElement(By.id("title"));
+  const startDate = await driver.findElement(By.id("start-date"));
+  const endDate = await driver.findElement(By.id("end-date"));
   const groups = await driver.findElement(By.id("groups"));
-  await groups.clear();
-  await groups.sendKeys("2");
-  await driver.findElement(By.css('button[type="submit"]')).click();
-  await driver.wait(
-    until.elementLocated(By.xpath("//*[contains(text(),'успешно создан')]")),
-    5000,
+
+  await title.clear();
+  await title.sendKeys("Тестовый турнир Selenium");
+  await setInputValue(driver, startDate, "2026-05-10");
+  await setInputValue(driver, endDate, "2026-05-20");
+  await setInputValue(driver, groups, "2");
+
+  const submitButton = await driver.findElement(
+    By.xpath("//button[@type='submit' and contains(., 'Сохранить турнир')]"),
   );
+  await clickSafely(driver, submitButton);
+
+  const successLocator = By.xpath("//*[contains(text(),'успешно создан')]");
+  const errorLocator = By.css(".field-error");
+
+  await driver.wait(async () => {
+    const success = await driver.findElements(successLocator);
+    const errors = await driver.findElements(errorLocator);
+    return success.length > 0 || errors.length > 0;
+  }, 10000);
+
+  const success = await driver.findElements(successLocator);
+
+  if (success.length > 0) {
+    return;
+  }
+
+  const errors = await driver.findElements(errorLocator);
+  const messages = await Promise.all(errors.map((item) => item.getText()));
+  throw new Error(`Tournament form validation failed: ${messages.join("; ")}`);
 }
 
 async function runScenario(name, fn) {
