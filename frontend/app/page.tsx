@@ -12,12 +12,12 @@ export default function HomePage() {
       <main className="page-layout">
         <section className="hero glass-panel">
           <div className="hero-copy">
-            <span className="pill">Frontend next level</span>
+            <span className="pill hero-pill">Football Tournament System</span>
             <h1>Фронтенд с авторизацией и ролями для системы турниров</h1>
             <p>
-              Теперь это уже не просто витрина, а демо-приложение с входом в
-              систему, доступами по ролям, кабинетом пользователя и защищёнными
-              разделами под реальные сценарии проекта.
+              Это уже не просто набор страниц, а спортивный интерфейс учебного
+              веб-приложения: роли, кабинет, маршруты, формы, таблицы,
+              адаптивность и готовая база под подключение backend.
             </p>
             <div className="hero-actions">
               <Link className="button button-primary" href="/login">
@@ -32,15 +32,33 @@ export default function HomePage() {
             <div className="stat-card">
               <span>Сценарии фронтенда</span>
               <strong>8+</strong>
+              <span>от кабинета до матчей и заявок</span>
             </div>
             <div className="stat-card">
               <span>Роли доступа</span>
               <strong>5</strong>
+              <span>admin, organizer, referee, coach, fan</span>
             </div>
             <div className="stat-card">
               <span>Авторизация</span>
               <strong>Mock Auth</strong>
+              <span>готово к замене на реальный backend</span>
             </div>
+          </div>
+        </section>
+
+        <section className="hero-band">
+          <div className="hero-band-card">
+            <span>UI-компоненты</span>
+            <strong>Карточки, формы, таблицы</strong>
+          </div>
+          <div className="hero-band-card">
+            <span>Валидация</span>
+            <strong>Турнир, заявка, результат матча</strong>
+          </div>
+          <div className="hero-band-card">
+            <span>Адаптивность</span>
+            <strong>От мобильного судьи до десктопа организатора</strong>
           </div>
         </section>
 
@@ -98,6 +116,10 @@ export default function HomePage() {
           <article className="card">
             <div className="section-head">
               <h2 className="section-title">Активные турниры</h2>
+              <p className="section-subtitle">
+                Карточки главного экрана с ключевой информацией по текущим
+                соревнованиям.
+              </p>
             </div>
             <ul className="list">
               {initialTournaments.map((tournament) => (
@@ -117,6 +139,9 @@ export default function HomePage() {
           <article className="card">
             <div className="section-head">
               <h2 className="section-title">Ближайшие матчи</h2>
+              <p className="section-subtitle">
+                Быстрый обзор для судьи, тренера и болельщика.
+              </p>
             </div>
             <ul className="list">
               {initialMatches.map((match) => (

@@ -23,6 +23,10 @@ export function DashboardOverview() {
             таблицам, статистике и административным действиям в зависимости от
             роли.
           </p>
+          <div className="dashboard-note">
+            <strong>Фокус роли:</strong> интерфейс подстраивается под ваш
+            сценарий работы и оставляет только релевантные действия.
+          </div>
         </div>
         <div className="hero-side">
           {cards.map((card) => (
@@ -37,7 +41,7 @@ export function DashboardOverview() {
 
       <section className="grid grid-3">
         {cards.map((card) => (
-          <article className="card" key={`${card.title}-detail`}>
+          <article className="card metric-card" key={`${card.title}-detail`}>
             <div className="section-head">
               <h2 className="section-title">{card.title}</h2>
               <p className="section-subtitle">{card.caption}</p>

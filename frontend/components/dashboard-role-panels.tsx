@@ -43,7 +43,7 @@ export function DashboardRolePanels() {
 
   if (user.role === "admin") {
     return (
-      <section className="card">
+      <section className="card panel-accent panel-admin">
         <div className="section-head">
           <h2 className="section-title">Управление ролями</h2>
           <p className="section-subtitle">
@@ -105,7 +105,7 @@ export function DashboardRolePanels() {
 
   if (user.role === "organizer") {
     return (
-      <section className="card">
+      <section className="card panel-accent panel-organizer">
         <div className="section-head">
           <h2 className="section-title">Организатор: оперативные задачи</h2>
           <p className="section-subtitle">
@@ -179,7 +179,7 @@ export function DashboardRolePanels() {
 
   if (user.role === "referee") {
     return (
-      <section className="card">
+      <section className="card panel-accent panel-referee">
         <div className="section-head">
           <h2 className="section-title">Судья: мои матчи</h2>
           <p className="section-subtitle">
@@ -207,7 +207,7 @@ export function DashboardRolePanels() {
 
   if (user.role === "coach") {
     return (
-      <section className="card">
+      <section className="card panel-accent panel-coach">
         <div className="section-head">
           <h2 className="section-title">Тренер: статус моей команды</h2>
           <p className="section-subtitle">
@@ -232,7 +232,7 @@ export function DashboardRolePanels() {
   }
 
   return (
-    <section className="card">
+    <section className="card panel-accent panel-fan">
       <div className="section-head">
         <h2 className="section-title">Болельщик: открытые турниры</h2>
         <p className="section-subtitle">

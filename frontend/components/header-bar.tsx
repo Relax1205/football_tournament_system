@@ -10,11 +10,12 @@ export function HeaderBar() {
 
   return (
     <header className="topbar glass-panel">
-      <div className="brand">
+      <div className="brand cluster-brand">
         <div className="brand-badge">FT</div>
         <div className="brand-copy">
+          <div className="brand-kicker">Frontend &amp; QA Lead</div>
           <strong>Система учёта турниров</strong>
-          <span>Frontend next level: роли, вход, кабинет, сценарии</span>
+          <span>Русский интерфейс, роли, валидация, кабинет и mock API</span>
         </div>
       </div>
       <Navigation />

@@ -10,6 +10,8 @@ type LayoutShellProps = {
 export function LayoutShell({ children }: LayoutShellProps) {
   return (
     <div className="page-shell">
+      <div className="ambient-orb ambient-orb-left" />
+      <div className="ambient-orb ambient-orb-right" />
       <HeaderBar />
       {children}
       <div className="footer-note">

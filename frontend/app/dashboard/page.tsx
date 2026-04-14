@@ -9,26 +9,74 @@ import { useAuth } from "@/components/auth-provider";
 
 const quickLinksByRole = {
   admin: [
-    { href: "/tournaments", label: "Управление турнирами" },
-    { href: "/teams", label: "Роли и команды" },
-    { href: "/matches", label: "Матчи и результаты" },
+    {
+      href: "/tournaments",
+      label: "Управление турнирами",
+      note: "Создание, статусы, структура соревнований",
+    },
+    {
+      href: "/teams",
+      label: "Роли и команды",
+      note: "Ролевой доступ, пользователи, составы",
+    },
+    {
+      href: "/matches",
+      label: "Матчи и результаты",
+      note: "Контроль судейских сценариев и подтверждений",
+    },
   ],
   organizer: [
-    { href: "/tournaments", label: "Создать турнир" },
-    { href: "/matches", label: "Проверить результаты" },
-    { href: "/teams", label: "Рассмотреть заявки" },
+    {
+      href: "/tournaments",
+      label: "Создать турнир",
+      note: "Новые соревнования и фильтрация текущих",
+    },
+    {
+      href: "/matches",
+      label: "Проверить результаты",
+      note: "Подтверждение результатов и статусов матчей",
+    },
+    {
+      href: "/teams",
+      label: "Рассмотреть заявки",
+      note: "Одобрение и отклонение заявок команд",
+    },
   ],
   referee: [
-    { href: "/matches", label: "Ввести результат матча" },
-    { href: "/standings", label: "Проверить таблицу" },
+    {
+      href: "/matches",
+      label: "Ввести результат матча",
+      note: "Счёт, событие, минута, комментарий судьи",
+    },
+    {
+      href: "/standings",
+      label: "Проверить таблицу",
+      note: "Актуальное положение команд после матчей",
+    },
   ],
   coach: [
-    { href: "/teams", label: "Подать заявку команды" },
-    { href: "/standings", label: "Посмотреть таблицу" },
+    {
+      href: "/teams",
+      label: "Подать заявку команды",
+      note: "Регистрация команды и контроль статуса заявки",
+    },
+    {
+      href: "/standings",
+      label: "Посмотреть таблицу",
+      note: "Следить за местом команды и статистикой",
+    },
   ],
   fan: [
-    { href: "/standings", label: "Турнирная таблица" },
-    { href: "/teams", label: "Статистика игроков" },
+    {
+      href: "/standings",
+      label: "Турнирная таблица",
+      note: "Публичный просмотр текущего положения команд",
+    },
+    {
+      href: "/teams",
+      label: "Статистика игроков",
+      note: "Бомбардиры, карточки и составы команд",
+    },
   ],
 } as const;
 
@@ -48,11 +96,12 @@ export default function DashboardPage() {
                 Набор ссылок меняется в зависимости от вашей роли.
               </p>
             </div>
-            <div className="quick-actions">
+            <div className="quick-actions-grid">
               {user
                 ? quickLinksByRole[user.role].map((link) => (
                     <Link className="quick-link" href={link.href} key={link.href}>
-                      {link.label}
+                      <span className="quick-link-label">{link.label}</span>
+                      <span className="quick-link-note">{link.note}</span>
                     </Link>
                   ))
                 : null}
