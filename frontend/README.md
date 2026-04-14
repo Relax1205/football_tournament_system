@@ -2,6 +2,24 @@
 
 Фронтенд учебного проекта **«Система учёта футбольных турниров»**.
 
+Этот каталог соответствует зоне ответственности `Студент 2 (Frontend & QA Lead)` и содержит:
+
+- пользовательский интерфейс на `Next.js + React + TypeScript`
+- mock-авторизацию и разграничение ролей
+- UI-компоненты, формы и базовую клиентскую валидацию
+- адаптивную стилизацию
+- документацию пользователя в формате wiki
+- QA-артефакты на основе отчётов №11–12
+
+## Реализовано в текущей версии
+
+- главная страница, вход и личный кабинет
+- турниры с поиском, фильтрацией, сортировкой и созданием
+- матчи с вводом результата и подтверждением
+- турнирная таблица
+- команды, заявки и статистика игроков
+- mock API слой для демонстрации сценариев
+
 ## Структура
 
 ```text
@@ -23,11 +41,30 @@ components/
   standings-client.tsx
   teams-client.tsx
   tournaments-client.tsx
+docs/
+  wiki/
+  testing/
 ```
+
+## Документация
+
+- Пользовательская документация: [docs/wiki/Home.md](docs/wiki/Home.md)
+- QA-документация: [docs/testing/test-cases.md](docs/testing/test-cases.md)
+- Чек-лист: [docs/testing/checklist.md](docs/testing/checklist.md)
+- Матрица требований: [docs/testing/requirements-test-matrix.md](docs/testing/requirements-test-matrix.md)
+- Программа испытаний: [docs/testing/test-program.md](docs/testing/test-program.md)
 
 ## Запуск
 
 ```bash
+nvm use 22
 npm install
 npm run dev
 ```
+
+## Текущие ограничения
+
+- используется mock API вместо backend
+- экспорт в PDF и Excel пока не реализован
+- Selenium WebDriver пока подготовлен только на уровне документации и плана тестирования
+- GitHub Wiki ещё не опубликована, но локальные страницы уже подготовлены в `docs/wiki/`
