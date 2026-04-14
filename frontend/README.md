@@ -53,6 +53,13 @@ docs/
 - Чек-лист: [docs/testing/checklist.md](docs/testing/checklist.md)
 - Матрица требований: [docs/testing/requirements-test-matrix.md](docs/testing/requirements-test-matrix.md)
 - Программа испытаний: [docs/testing/test-program.md](docs/testing/test-program.md)
+- Отчёт о ручном тестировании: [docs/testing/manual-test-report.md](docs/testing/manual-test-report.md)
+- Инструменты тестирования: [docs/testing/testing-tools.md](docs/testing/testing-tools.md)
+
+## UI-автотесты
+
+- Каркас Selenium WebDriver: [tests/ui/run-ui-tests.mjs](tests/ui/run-ui-tests.mjs)
+- Инструкция по запуску: [tests/ui/README.md](tests/ui/README.md)
 
 ## Запуск
 
@@ -66,5 +73,5 @@ npm run dev
 
 - используется mock API вместо backend
 - экспорт в PDF и Excel пока не реализован
-- Selenium WebDriver пока подготовлен только на уровне документации и плана тестирования
+- Selenium WebDriver подготовлен как стартовый каркас и требует установки браузерного драйвера
 - GitHub Wiki ещё не опубликована, но локальные страницы уже подготовлены в `docs/wiki/`
