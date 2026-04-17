@@ -1,0 +1,6 @@
+{
+  "entryPoints": ["backend/src/**/*.ts"],
+  "out": "docs",
+  "exclude": ["**/*.spec.ts", "**/node_modules/**"],
+  "tsconfig": "backend/tsconfig.json"
+}

@@ -1,0 +1,35 @@
+services:
+  # Сервис Базы Данных
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Schokk2005
+      POSTGRES_DB: football_tournament_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # Сервис Бэкенда
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "4000:4000"
+    environment:
+      # Переопределяем URL базы данных для Docker-сети
+      # 'db' — это имя сервиса базы данных выше
+      DATABASE_URL: "postgresql://postgres:postgres@db:5432/football_tournament_db?schema=public"
+      PORT: 4000
+      JWT_SECRET: "dev-secret-key-docker"
+      JWT_EXPIRES_IN: "7d"
+    depends_on:
+      - db
+
+# Хранилище для данных БД (чтобы данные не терялись при перезапуске)
+volumes:
+  pgdata:
