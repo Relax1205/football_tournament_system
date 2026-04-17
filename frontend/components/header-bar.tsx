@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { Navigation } from "@/components/navigation";
 import { roleLabels } from "@/components/mock-data";
 import { useAuth } from "@/components/auth-provider";
@@ -13,9 +12,7 @@ export function HeaderBar() {
       <div className="brand cluster-brand">
         <div className="brand-badge">FT</div>
         <div className="brand-copy">
-          <div className="brand-kicker">Frontend &amp; QA Lead</div>
           <strong>Система учёта турниров</strong>
-          <span>Русский интерфейс, роли, валидация, кабинет и mock API</span>
         </div>
       </div>
       <Navigation />
@@ -30,11 +27,7 @@ export function HeaderBar() {
               Выйти
             </button>
           </>
-        ) : (
-          <Link className="button button-primary" href="/login">
-            Войти в систему
-          </Link>
-        )}
+        ) : null}
       </div>
     </header>
   );
