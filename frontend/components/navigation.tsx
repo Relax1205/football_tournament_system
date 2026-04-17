@@ -27,6 +27,10 @@ export function Navigation() {
 
   const visibleLinks = links.filter((link) => {
     if (link.href === "/login") {
+      if (pathname === "/") {
+        return false;
+      }
+
       return !user;
     }
 
