@@ -35,6 +35,8 @@ const initialForm: MatchForm = {
 
 export function MatchesClient() {
   const { user } = useAuth();
+  const canEdit = user?.role === "admin" || user?.role === "organizer" || user?.role === "referee";
+  const canConfirm = user?.role === "admin" || user?.role === "organizer";
   const [items, setItems] = useState<MatchRecord[]>([]);
   const [players, setPlayers] = useState<PlayerRecord[]>([]);
   const [query, setQuery] = useState("");
@@ -112,12 +114,15 @@ export function MatchesClient() {
       nextErrors.awayScore = "Счёт должен быть целым и неотрицательным";
     }
 
-    if (form.eventMinute && (!Number.isInteger(eventMinute) || eventMinute < 1 || eventMinute > 120)) {
-      nextErrors.eventMinute = "Минута события должна быть от 1 до 120";
+    if (
+      form.eventMinute &&
+      (!Number.isInteger(eventMinute) || eventMinute < 1 || eventMinute > 120)
+    ) {
+      nextErrors.eventMinute = "Минута гола должна быть от 1 до 120";
     }
 
     if (form.comment.trim().length < 6) {
-      nextErrors.comment = "Добавьте короткий комментарий минимум из 6 символов";
+      nextErrors.comment = "Добавьте комментарий минимум из 6 символов";
     }
 
     return nextErrors;
@@ -141,12 +146,12 @@ export function MatchesClient() {
       homeScore: Number(form.homeScore),
       matchId: form.matchId,
       playerId: form.playerId || undefined,
-      status: user?.role === "organizer" ? "Подтверждён" : form.status,
+      status: user?.role === "organizer" || user?.role === "admin" ? "Подтверждён" : form.status,
     });
 
     setItems((current) => current.map((match) => (match.id === updated.id ? updated : match)));
     setSuccess(
-      user?.role === "organizer"
+      user?.role === "organizer" || user?.role === "admin"
         ? "Результат сохранён и подтверждён"
         : "Результат сохранён и отправлен организатору",
     );
@@ -156,9 +161,10 @@ export function MatchesClient() {
     <>
       <section className="card">
         <div className="page-head">
-          <h1 className="page-title">Матчи и результаты</h1>
+          <h1 className="page-title">Матчи и расписание</h1>
           <p className="page-subtitle">
-            Рабочая таблица с поиском, фильтрацией, подтверждением результата и скачиванием протокола.
+            Раздел доступен всем ролям: болельщик и тренер просматривают календарь, судья и
+            организатор работают с результатами.
           </p>
         </div>
         <div className="toolbar">
@@ -214,7 +220,7 @@ export function MatchesClient() {
                   <td>{match.status}</td>
                   <td>
                     <div className="inline-actions">
-                      {user?.role === "organizer" && match.status === "Требует подтверждения" ? (
+                      {canConfirm && match.status === "Требует подтверждения" ? (
                         <button
                           className="button button-secondary"
                           onClick={async () => {
@@ -229,7 +235,7 @@ export function MatchesClient() {
                         </button>
                       ) : null}
                       <a className="button button-secondary" href={getMatchReportUrl(match.id)}>
-                        PDF
+                        Сгенерировать протокол
                       </a>
                     </div>
                   </td>
@@ -240,172 +246,172 @@ export function MatchesClient() {
         </div>
       </section>
 
-      <section className="card">
-        <div className="section-head">
-          <h2 className="section-title">Ввод результата матча</h2>
-          <p className="section-subtitle">
-            Судья отправляет результат и событие матча, организатор может сразу подтвердить итог.
-          </p>
-        </div>
-        <form className="form-grid" onSubmit={handleSubmit}>
-          <div className="field">
-            <label htmlFor="match-id">Матч</label>
-            <select
-              id="match-id"
-              onChange={(event) => {
-                const nextMatch = items.find((match) => match.id === event.target.value);
-                const nextPlayer = players.find(
-                  (player) =>
-                    player.teamId === nextMatch?.homeTeamId || player.teamId === nextMatch?.awayTeamId,
-                );
+      {canEdit ? (
+        <section className="card">
+          <div className="section-head">
+            <h2 className="section-title">Ввод результата матча</h2>
+            <p className="section-subtitle">
+              Судья отправляет результат и событие матча, организатор может сразу подтвердить итог.
+            </p>
+          </div>
+          <form className="form-grid" noValidate onSubmit={handleSubmit}>
+            <div className="field">
+              <label htmlFor="match-id">Матч</label>
+              <select
+                id="match-id"
+                onChange={(event) => {
+                  const nextMatch = items.find((match) => match.id === event.target.value);
+                  const nextPlayer = players.find(
+                    (player) =>
+                      player.teamId === nextMatch?.homeTeamId ||
+                      player.teamId === nextMatch?.awayTeamId,
+                  );
 
-                setForm((current) => ({
-                  ...current,
-                  matchId: event.target.value,
-                  homeScore: String(nextMatch?.homeScore ?? current.homeScore),
-                  awayScore: String(nextMatch?.awayScore ?? current.awayScore),
-                  playerId: nextPlayer?.id ?? "",
-                }));
-              }}
-              value={form.matchId}
-            >
-              {items.map((match) => (
-                <option key={match.id} value={match.id}>
-                  {match.home} / {match.away}
-                </option>
-              ))}
-            </select>
-            {errors.matchId ? <span className="field-error">{errors.matchId}</span> : null}
-          </div>
-          <div className="field">
-            <label htmlFor="status">Статус</label>
-            <select
-              id="status"
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  status: event.target.value as MatchStatus,
-                }))
-              }
-              value={form.status}
-            >
-              <option value="Требует подтверждения">Требует подтверждения</option>
-              {user?.role === "organizer" ? <option value="Подтверждён">Подтверждён</option> : null}
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor="home-score">Голы хозяев</label>
-            <input
-              id="home-score"
-              min="0"
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  homeScore: event.target.value,
-                }))
-              }
-              type="number"
-              value={form.homeScore}
-            />
-            {errors.homeScore ? <span className="field-error">{errors.homeScore}</span> : null}
-          </div>
-          <div className="field">
-            <label htmlFor="away-score">Голы гостей</label>
-            <input
-              id="away-score"
-              min="0"
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  awayScore: event.target.value,
-                }))
-              }
-              type="number"
-              value={form.awayScore}
-            />
-            {errors.awayScore ? <span className="field-error">{errors.awayScore}</span> : null}
-          </div>
-          <div className="field">
-            <label htmlFor="event-player">Игрок</label>
-            <select
-              id="event-player"
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  playerId: event.target.value,
-                }))
-              }
-              value={form.playerId}
-            >
-              {availablePlayers.map((player) => (
-                <option key={player.id} value={player.id}>
-                  {player.name} · {player.team}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor="event-minute">Минута события</label>
-            <input
-              id="event-minute"
-              max="120"
-              min="1"
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  eventMinute: event.target.value,
-                }))
-              }
-              type="number"
-              value={form.eventMinute}
-            />
-            {errors.eventMinute ? <span className="field-error">{errors.eventMinute}</span> : null}
-          </div>
-          <div className="field">
-            <label htmlFor="event-type">Событие</label>
-            <select
-              id="event-type"
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  eventType: event.target.value as MatchEventType,
-                }))
-              }
-              value={form.eventType}
-            >
-              <option value="goal">Гол</option>
-              <option value="yellow">Жёлтая карточка</option>
-              <option value="red">Красная карточка</option>
-              <option value="substitution">Замена</option>
-            </select>
-          </div>
-          <div className="field field-wide">
-            <label htmlFor="comment">Комментарий судьи</label>
-            <input
-              id="comment"
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  comment: event.target.value,
-                }))
-              }
-              placeholder="Например, данные проверены после матча"
-              value={form.comment}
-            />
-            {errors.comment ? <span className="field-error">{errors.comment}</span> : null}
-          </div>
-          {success ? (
-            <div className="field field-wide">
-              <div className="message-success">{success}</div>
+                  setForm((current) => ({
+                    ...current,
+                    matchId: event.target.value,
+                    homeScore: String(nextMatch?.homeScore ?? current.homeScore),
+                    awayScore: String(nextMatch?.awayScore ?? current.awayScore),
+                    playerId: nextPlayer?.id ?? "",
+                  }));
+                }}
+                value={form.matchId}
+              >
+                {items.map((match) => (
+                  <option key={match.id} value={match.id}>
+                    {match.home} / {match.away}
+                  </option>
+                ))}
+              </select>
+              {errors.matchId ? <span className="field-error">{errors.matchId}</span> : null}
             </div>
-          ) : null}
-          <div className="field field-wide">
-            <button className="button button-primary" type="submit">
-              Сохранить результат
-            </button>
+            <div className="field">
+              <label htmlFor="status">Статус</label>
+              <select
+                id="status"
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    status: event.target.value as MatchStatus,
+                  }))
+                }
+                value={form.status}
+              >
+                <option value="Требует подтверждения">Требует подтверждения</option>
+                {canConfirm ? <option value="Подтверждён">Подтверждён</option> : null}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="home-score">Голы хозяев</label>
+              <input
+                id="home-score"
+                min="0"
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, homeScore: event.target.value }))
+                }
+                type="number"
+                value={form.homeScore}
+              />
+              {errors.homeScore ? <span className="field-error">{errors.homeScore}</span> : null}
+            </div>
+            <div className="field">
+              <label htmlFor="away-score">Голы гостей</label>
+              <input
+                id="away-score"
+                min="0"
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, awayScore: event.target.value }))
+                }
+                type="number"
+                value={form.awayScore}
+              />
+              {errors.awayScore ? <span className="field-error">{errors.awayScore}</span> : null}
+            </div>
+            <div className="field">
+              <label htmlFor="event-player">Игрок</label>
+              <select
+                id="event-player"
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, playerId: event.target.value }))
+                }
+                value={form.playerId}
+              >
+                {availablePlayers.map((player) => (
+                  <option key={player.id} value={player.id}>
+                    {player.name} · {player.team}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="event-minute">Минута гола</label>
+              <input
+                id="event-minute"
+                max="120"
+                min="1"
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, eventMinute: event.target.value }))
+                }
+                type="number"
+                value={form.eventMinute}
+              />
+              {errors.eventMinute ? (
+                <span className="field-error">{errors.eventMinute}</span>
+              ) : null}
+            </div>
+            <div className="field">
+              <label htmlFor="event-type">Событие</label>
+              <select
+                id="event-type"
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    eventType: event.target.value as MatchEventType,
+                  }))
+                }
+                value={form.eventType}
+              >
+                <option value="goal">Гол</option>
+                <option value="yellow">Жёлтая карточка</option>
+                <option value="red">Красная карточка</option>
+                <option value="substitution">Замена</option>
+              </select>
+            </div>
+            <div className="field field-wide">
+              <label htmlFor="comment">Комментарий судьи</label>
+              <input
+                id="comment"
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, comment: event.target.value }))
+                }
+                placeholder="Например, данные проверены после матча"
+                value={form.comment}
+              />
+              {errors.comment ? <span className="field-error">{errors.comment}</span> : null}
+            </div>
+            {success ? (
+              <div className="field field-wide">
+                <div className="message-success">{success}</div>
+              </div>
+            ) : null}
+            <div className="field field-wide">
+              <button className="button button-primary" type="submit">
+                Сохранить результат
+              </button>
+            </div>
+          </form>
+        </section>
+      ) : (
+        <section className="card">
+          <div className="section-head">
+            <h2 className="section-title">Режим просмотра</h2>
+            <p className="section-subtitle">
+              Для вашей роли доступен просмотр календаря, результатов и скачивание протокола без
+              прав редактирования.
+            </p>
           </div>
-        </form>
-      </section>
+        </section>
+      )}
     </>
   );
 }

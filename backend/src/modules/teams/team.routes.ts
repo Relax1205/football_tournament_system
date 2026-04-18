@@ -83,7 +83,7 @@ router.delete('/:id', authenticate, requireRoles(Role.ADMIN, Role.ORGANIZER), as
 router.post('/:id/players', authenticate, requireRoles(Role.ADMIN, Role.ORGANIZER, Role.COACH), async (request, response) => {
   try {
     const payload = addPlayerSchema.parse(request.body);
-    const player = await TeamService.addPlayer(request.params.id, payload);
+    const player = await TeamService.addPlayer(request.params.id, payload, request.auth);
 
     response.status(201).json({ success: true, data: player });
   } catch (error) {

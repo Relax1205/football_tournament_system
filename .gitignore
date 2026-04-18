@@ -58,6 +58,9 @@ coverage/
 *.pid
 *.seed
 *.tgz
+.codex_tmp/
+chrome/
+chromedriver/
 
 # Local accidental nested repo copy
 /football_tournament_system/

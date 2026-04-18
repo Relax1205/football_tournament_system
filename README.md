@@ -88,13 +88,13 @@ npm run stop
 Пароль для всех тестовых пользователей:
 
 ```text
-TestPass123!
+Test123!
 ```
 
 Доступные аккаунты:
 
 - `admin@tournament.ru`
-- `organizer@tournament.ru`
+- `org@tournament.ru`
 - `referee@tournament.ru`
 - `coach@tournament.ru`
 - `coach2@team.ru`

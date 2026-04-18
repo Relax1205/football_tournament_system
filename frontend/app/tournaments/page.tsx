@@ -6,7 +6,7 @@ export default function TournamentsPage() {
   return (
     <LayoutShell>
       <main className="page-layout">
-        <AccessGuard roles={["admin", "organizer"]}>
+        <AccessGuard roles={["admin", "organizer", "referee", "coach", "fan"]}>
           <TournamentsClient />
         </AccessGuard>
       </main>

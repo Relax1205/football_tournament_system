@@ -1,3 +1,4 @@
+import { Role } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '../../common/prisma';
 
@@ -131,12 +132,31 @@ export class TeamService {
     });
   }
 
-  static async addPlayer(teamId: string, input: z.infer<typeof addPlayerSchema>) {
+  static async addPlayer(
+    teamId: string,
+    input: z.infer<typeof addPlayerSchema>,
+    actor?: { role: Role; userId: string },
+  ) {
     const payload = addPlayerSchema.parse(input);
+    const team = await prisma.team.findUnique({
+      where: { id: teamId },
+      select: {
+        id: true,
+        coachId: true,
+      },
+    });
+
+    if (!team) {
+      throw new Error('Team not found');
+    }
+
+    if (actor?.role === Role.COACH && team.coachId !== actor.userId) {
+      throw new Error('Coaches can only manage their own teams');
+    }
 
     return prisma.player.create({
       data: {
-        teamId,
+        teamId: team.id,
         firstName: payload.firstName,
         lastName: payload.lastName,
         number: payload.number,

@@ -9,8 +9,8 @@ import { useAuth } from "@/components/auth-provider";
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
-  const [email, setEmail] = useState("organizer@tournament.ru");
-  const [password, setPassword] = useState("TestPass123!");
+  const [email, setEmail] = useState("org@tournament.ru");
+  const [password, setPassword] = useState("Test123!");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -22,7 +22,7 @@ export default function LoginPage() {
     const result = await login(email, password);
 
     if (!result.ok) {
-      setError(result.message ?? "Ошибка авторизации");
+      setError(result.message ?? "Ошибка аутентификации");
       setIsSubmitting(false);
       return;
     }
@@ -38,7 +38,8 @@ export default function LoginPage() {
             <div className="page-head">
               <h1 className="page-title">Вход в систему</h1>
               <p className="page-subtitle">
-                Авторизация через backend с тестовыми ролями для защиты экранов и проверки RBAC.
+                Авторизация через backend с тестовыми ролями для проверки RBAC и основных
+                пользовательских сценариев.
               </p>
             </div>
             <form className="form-grid" onSubmit={handleSubmit}>
@@ -77,8 +78,7 @@ export default function LoginPage() {
             <div className="section-head">
               <h2 className="section-title">Демо-аккаунты</h2>
               <p className="section-subtitle">
-                Можно быстро заходить под разными ролями и проверять поведение
-                интерфейса.
+                Можно быстро заходить под разными ролями и проверять поведение интерфейса.
               </p>
             </div>
             <ul className="list">
@@ -86,6 +86,7 @@ export default function LoginPage() {
                 <li className="list-item" key={user.id}>
                   <div>
                     <strong>{roleLabels[user.role]}</strong>
+                    <br />
                     {user.email}
                     <br />
                     Пароль: {user.password}

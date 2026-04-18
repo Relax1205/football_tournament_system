@@ -14,8 +14,8 @@ type NavLink = {
 const links: NavLink[] = [
   { href: "/", label: "Главная" },
   { href: "/dashboard", label: "Кабинет", roles: ["admin", "organizer", "referee", "coach", "fan"] },
-  { href: "/tournaments", label: "Турниры", roles: ["admin", "organizer"] },
-  { href: "/matches", label: "Матчи", roles: ["admin", "organizer", "referee"] },
+  { href: "/tournaments", label: "Турниры", roles: ["admin", "organizer", "referee", "coach", "fan"] },
+  { href: "/matches", label: "Матчи", roles: ["admin", "organizer", "referee", "coach", "fan"] },
   { href: "/standings", label: "Таблица", roles: ["admin", "organizer", "referee", "coach", "fan"] },
   { href: "/teams", label: "Команды", roles: ["admin", "organizer", "coach", "fan"] },
 ];
@@ -33,7 +33,7 @@ export function Navigation() {
   });
 
   return (
-    <nav className="nav" aria-label="Основная навигация">
+    <nav aria-label="Основная навигация" className="nav">
       {visibleLinks.map((link) => {
         const isActive = pathname === link.href;
 

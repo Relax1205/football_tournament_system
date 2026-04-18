@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { AccessGuard } from "@/components/access-guard";
-import { DashboardOverview } from "@/components/dashboard-overview";
 import { DashboardRolePanels } from "@/components/dashboard-role-panels";
 import { LayoutShell } from "@/components/layout-shell";
 import { useAuth } from "@/components/auth-provider";
@@ -12,70 +11,80 @@ const quickLinksByRole = {
     {
       href: "/tournaments",
       label: "Управление турнирами",
-      note: "Создание, статусы, структура соревнований",
+      note: "Создание турниров, статусы и параметры соревнований",
     },
     {
       href: "/teams",
-      label: "Роли и команды",
-      note: "Ролевой доступ, пользователи, составы",
+      label: "Пользователи и команды",
+      note: "Роли, заявки, составы и команды турниров",
     },
     {
       href: "/matches",
       label: "Матчи и результаты",
-      note: "Контроль судейских сценариев и подтверждений",
+      note: "Контроль сценариев судьи и подтверждение результатов",
     },
   ],
   organizer: [
     {
       href: "/tournaments",
       label: "Создать турнир",
-      note: "Новые соревнования и фильтрация текущих",
+      note: "Новые соревнования и управление текущими турнирами",
     },
     {
       href: "/matches",
       label: "Проверить результаты",
-      note: "Подтверждение результатов и статусов матчей",
+      note: "Подтверждение счёта, событий матча и протоколов",
     },
     {
       href: "/teams",
       label: "Рассмотреть заявки",
-      note: "Одобрение и отклонение заявок команд",
+      note: "Одобрение или отклонение командных заявок",
     },
   ],
   referee: [
     {
       href: "/matches",
       label: "Ввести результат матча",
-      note: "Счёт, событие, минута, комментарий судьи",
+      note: "Счёт, события, минуты и комментарии судьи",
     },
     {
       href: "/standings",
       label: "Проверить таблицу",
-      note: "Актуальное положение команд после матчей",
+      note: "Положение команд после подтверждённых матчей",
     },
   ],
   coach: [
     {
       href: "/teams",
-      label: "Подать заявку команды",
-      note: "Регистрация команды и контроль статуса заявки",
+      label: "Подать заявку",
+      note: "Регистрация команды и ведение состава игроков",
+    },
+    {
+      href: "/matches",
+      label: "Посмотреть расписание",
+      note: "Календарь матчей и результаты своей команды",
     },
     {
       href: "/standings",
-      label: "Посмотреть таблицу",
-      note: "Следить за местом команды и статистикой",
+      label: "Турнирная таблица",
+      note: "Место команды и статистика соревнования",
     },
   ],
   fan: [
     {
-      href: "/standings",
-      label: "Турнирная таблица",
-      note: "Публичный просмотр текущего положения команд",
+      href: "/tournaments",
+      label: "Турниры",
+      note: "Просмотр активных соревнований и их параметров",
     },
     {
-      href: "/teams",
-      label: "Статистика игроков",
-      note: "Бомбардиры, карточки и составы команд",
+      href: "/matches",
+      label: "Расписание матчей",
+      note: "Календарь игр, счёт и протоколы матчей",
+    },
+    {
+      href: "/standings",
+      label: "Турнирная таблица",
+      note: "Публичный просмотр положения команд и результатов",
     },
   ],
 } as const;
@@ -87,13 +96,12 @@ export default function DashboardPage() {
     <LayoutShell>
       <main className="page-layout">
         <AccessGuard>
-          <DashboardOverview />
           <DashboardRolePanels />
           <section className="card">
             <div className="section-head">
               <h2 className="section-title">Быстрые действия</h2>
               <p className="section-subtitle">
-                Набор ссылок меняется в зависимости от вашей роли.
+                Набор ссылок меняется в зависимости от вашей роли в системе.
               </p>
             </div>
             <div className="quick-actions-grid">

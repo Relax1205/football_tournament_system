@@ -1,4 +1,4 @@
-import { ApplicationStatus, Role } from '@prisma/client';
+import { ApplicationStatus, Role, TournamentStatus } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '../../common/prisma';
 
@@ -42,6 +42,10 @@ export class ApplicationService {
 
     if (!tournament) {
       throw new Error('Tournament not found');
+    }
+
+    if (tournament.status !== TournamentStatus.REGISTRATION_OPEN) {
+      throw new Error('Applications are available only for tournaments with open registration');
     }
 
     return prisma.application.create({

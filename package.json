@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "dev": "docker compose up --build",
-    "start": "docker compose up --build",
+    "start": "docker compose up",
     "stop": "docker compose down",
     "reset": "docker compose down -v --remove-orphans",
     "logs": "docker compose logs -f"

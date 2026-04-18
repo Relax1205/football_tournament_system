@@ -179,6 +179,13 @@ type CreateApplicationInput = {
   tournament: string;
 };
 
+export type CreateTeamInput = {
+  city?: string;
+  coachId?: string;
+  name: string;
+  tournamentId: string;
+};
+
 export type SaveMatchResultInput = {
   awayScore: number;
   comment: string;
@@ -445,6 +452,36 @@ export async function createTournament(input: CreateTournamentInput) {
   return mapTournament(created);
 }
 
+export async function createTeam(input: CreateTeamInput) {
+  const created = await requestJson<ApiTeam>(
+    "/api/teams",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        name: input.name,
+        city: input.city,
+        coachId: input.coachId || null,
+        tournamentId: input.tournamentId,
+      }),
+    },
+  );
+
+  return {
+    id: created.id,
+    name: created.name,
+    city: created.city ?? undefined,
+    tournamentId: created.tournamentId,
+    coachName: created.coach?.name ?? created.coach?.email,
+    playersCount: created.players?.length ?? 0,
+    players: created.players?.map((player) => ({
+      id: player.id,
+      firstName: player.firstName,
+      lastName: player.lastName,
+      number: player.number ?? null,
+    })),
+  } as TeamRecord;
+}
+
 export async function listMatches(tournamentId?: string) {
   const query = tournamentId ? `?tournamentId=${encodeURIComponent(tournamentId)}` : "";
   const matches = await requestJson<ApiMatch[]>(`/api/matches${query}`);
@@ -467,7 +504,7 @@ export async function createMatch(input: CreateMatchInput) {
 }
 
 export async function saveMatchResult(input: SaveMatchResultInput) {
-  const match = await requestJson<ApiMatch>(
+  const savedMatch = await requestJson<ApiMatch>(
     `/api/matches/${input.matchId}/score`,
     {
       method: "PUT",
@@ -500,15 +537,23 @@ export async function saveMatchResult(input: SaveMatchResultInput) {
       },
     );
 
-    const refreshed = await listMatches(match.tournamentId);
+    const refreshed = await listMatches(savedMatch.tournamentId);
     const updated = refreshed.find((item) => item.id === input.matchId);
 
     if (updated) {
+      if (input.status === "Подтверждён") {
+        return confirmMatch(input.matchId);
+      }
+
       return updated;
     }
   }
 
-  return mapMatch(match);
+  if (input.status === "Подтверждён") {
+    return confirmMatch(input.matchId);
+  }
+
+  return mapMatch(savedMatch);
 }
 
 export async function confirmMatch(matchId: string) {
@@ -555,7 +600,11 @@ export async function listPlayers(tournamentId?: string) {
 
 export async function listApplications(tournamentId?: string) {
   const query = tournamentId ? `?tournamentId=${encodeURIComponent(tournamentId)}` : "";
-  const applications = await requestJson<ApiApplication[]>(`/api/applications${query}`, undefined, true);
+  const applications = await requestJson<ApiApplication[]>(
+    `/api/applications${query}`,
+    undefined,
+    true,
+  );
   return applications.map(mapApplication);
 }
 

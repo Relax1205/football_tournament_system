@@ -6,7 +6,7 @@ export default function MatchesPage() {
   return (
     <LayoutShell>
       <main className="page-layout">
-        <AccessGuard roles={["admin", "organizer", "referee"]}>
+        <AccessGuard roles={["admin", "organizer", "referee", "coach", "fan"]}>
           <MatchesClient />
         </AccessGuard>
       </main>

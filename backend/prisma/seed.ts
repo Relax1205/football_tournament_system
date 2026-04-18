@@ -11,6 +11,53 @@ import {
 import { StandingsService } from '../src/modules/standings/standings.service';
 
 const prisma = new PrismaClient();
+const DEMO_PASSWORD = 'Test123!';
+const DEMO_EMAILS = [
+  'admin@tournament.ru',
+  'organizer@tournament.ru',
+  'org@tournament.ru',
+  'referee@tournament.ru',
+  'coach@tournament.ru',
+  'coach2@team.ru',
+  'fan@tournament.ru',
+];
+
+type SeedPlayerInput = {
+  firstName: string;
+  lastName: string;
+  number: number;
+};
+
+// Full 18-player roster so every seeded team looks like a realistic tournament squad.
+const SQUAD_TEMPLATE: SeedPlayerInput[] = [
+  { firstName: 'Anton', lastName: 'Belov', number: 1 },
+  { firstName: 'Ivan', lastName: 'Sokolov', number: 2 },
+  { firstName: 'Pavel', lastName: 'Romanov', number: 3 },
+  { firstName: 'Mikhail', lastName: 'Orlov', number: 4 },
+  { firstName: 'Dmitry', lastName: 'Egorov', number: 5 },
+  { firstName: 'Kirill', lastName: 'Zaitsev', number: 6 },
+  { firstName: 'Andrey', lastName: 'Smirnov', number: 7 },
+  { firstName: 'Maksim', lastName: 'Kuznetsov', number: 8 },
+  { firstName: 'Ilya', lastName: 'Lebedev', number: 9 },
+  { firstName: 'Sergey', lastName: 'Popov', number: 10 },
+  { firstName: 'Roman', lastName: 'Fedorov', number: 11 },
+  { firstName: 'Egor', lastName: 'Kozlov', number: 12 },
+  { firstName: 'Nikita', lastName: 'Tarasov', number: 13 },
+  { firstName: 'Alexey', lastName: 'Morozov', number: 14 },
+  { firstName: 'Vladislav', lastName: 'Vinogradov', number: 15 },
+  { firstName: 'Denis', lastName: 'Mironov', number: 16 },
+  { firstName: 'Timur', lastName: 'Borisov', number: 17 },
+  { firstName: 'Georgy', lastName: 'Karpov', number: 18 },
+];
+
+const FULL_SQUAD_SIZE = SQUAD_TEMPLATE.length;
+
+function buildRoster(tag: string): SeedPlayerInput[] {
+  return SQUAD_TEMPLATE.map((player) => ({
+    ...player,
+    lastName: `${player.lastName}-${tag}`,
+  }));
+}
 
 async function createUser(email: string, name: string, role: Role, password: string) {
   const hashedPassword = await bcrypt.hash(password, 12);
@@ -39,18 +86,25 @@ async function main() {
   await prisma.team.deleteMany();
   await prisma.application.deleteMany();
   await prisma.tournament.deleteMany();
+  await prisma.user.deleteMany({
+    where: {
+      email: {
+        in: DEMO_EMAILS,
+      },
+    },
+  });
 
-  await createUser('admin@tournament.ru', 'Иван Администратор', Role.ADMIN, 'TestPass123!');
-  const organizer = await createUser('organizer@tournament.ru', 'Мария Организатор', Role.ORGANIZER, 'TestPass123!');
-  const referee = await createUser('referee@tournament.ru', 'Сергей Судья', Role.REFEREE, 'TestPass123!');
-  const coach1 = await createUser('coach@tournament.ru', 'Алексей Тренер', Role.COACH, 'TestPass123!');
-  const coach2 = await createUser('coach2@team.ru', 'Дмитрий Тренер', Role.COACH, 'TestPass123!');
-  await createUser('fan@tournament.ru', 'Максим Болельщик', Role.VIEWER, 'TestPass123!');
+  await createUser('admin@tournament.ru', 'Ivan Administrator', Role.ADMIN, DEMO_PASSWORD);
+  const organizer = await createUser('org@tournament.ru', 'Maria Organizer', Role.ORGANIZER, DEMO_PASSWORD);
+  const referee = await createUser('referee@tournament.ru', 'Sergey Referee', Role.REFEREE, DEMO_PASSWORD);
+  const coach1 = await createUser('coach@tournament.ru', 'Alexey Coach', Role.COACH, DEMO_PASSWORD);
+  const coach2 = await createUser('coach2@team.ru', 'Dmitry Coach', Role.COACH, DEMO_PASSWORD);
+  await createUser('fan@tournament.ru', 'Maxim Fan', Role.VIEWER, DEMO_PASSWORD);
 
   const activeTournament = await prisma.tournament.create({
     data: {
-      name: 'Кубок РТУ МИРЭА 2026',
-      description: 'Основной учебный турнир для демонстрации расписания, результатов и таблицы.',
+      name: 'RTU Cup 2026',
+      description: 'Main demo tournament with schedule, standings and reports.',
       startDate: new Date('2026-04-01T15:00:00.000Z'),
       endDate: new Date('2026-05-31T15:00:00.000Z'),
       groups: 1,
@@ -61,8 +115,8 @@ async function main() {
 
   const registrationTournament = await prisma.tournament.create({
     data: {
-      name: 'Весенний кубок Екатеринбурга',
-      description: 'Турнир с открытой регистрацией и заявками команд.',
+      name: 'Spring Cup Ekaterinburg',
+      description: 'Tournament open for team applications.',
       startDate: new Date('2026-05-10T12:00:00.000Z'),
       endDate: new Date('2026-06-15T12:00:00.000Z'),
       groups: 2,
@@ -73,47 +127,35 @@ async function main() {
 
   const programmers = await prisma.team.create({
     data: {
-      name: 'ФК Программисты',
-      city: 'Москва',
+      name: 'FC Programmers',
+      city: 'Moscow',
       tournamentId: activeTournament.id,
       coachId: coach1.id,
       players: {
-        create: [
-          { firstName: 'Иван', lastName: 'Кодов', number: 10 },
-          { firstName: 'Петр', lastName: 'Багов', number: 7 },
-          { firstName: 'Анна', lastName: 'Логова', number: 1 },
-        ],
+        create: buildRoster('Code'),
       },
     },
   });
 
   const testers = await prisma.team.create({
     data: {
-      name: 'СК Тестировщики',
-      city: 'Москва',
+      name: 'SC Testers',
+      city: 'Kazan',
       tournamentId: activeTournament.id,
       coachId: coach2.id,
       players: {
-        create: [
-          { firstName: 'Сергей', lastName: 'Чеклистов', number: 9 },
-          { firstName: 'Олег', lastName: 'Фреймов', number: 5 },
-          { firstName: 'Мария', lastName: 'Регрессова', number: 11 },
-        ],
+        create: buildRoster('Test'),
       },
     },
   });
 
   const analysts = await prisma.team.create({
     data: {
-      name: 'Аналитики United',
-      city: 'Москва',
+      name: 'Analysts United',
+      city: 'Novosibirsk',
       tournamentId: activeTournament.id,
       players: {
-        create: [
-          { firstName: 'Артем', lastName: 'Диаграммов', number: 8 },
-          { firstName: 'Лев', lastName: 'Требов', number: 6 },
-          { firstName: 'Егор', lastName: 'Процессов', number: 4 },
-        ],
+        create: buildRoster('Analyst'),
       },
     },
   });
@@ -121,14 +163,10 @@ async function main() {
   const ops = await prisma.team.create({
     data: {
       name: 'DevOps City',
-      city: 'Санкт-Петербург',
+      city: 'Saint Petersburg',
       tournamentId: activeTournament.id,
       players: {
-        create: [
-          { firstName: 'Юрий', lastName: 'Деплоев', number: 3 },
-          { firstName: 'Илья', lastName: 'Контейнеров', number: 14 },
-          { firstName: 'Соня', lastName: 'Мониторинг', number: 19 },
-        ],
+        create: buildRoster('Ops'),
       },
     },
   });
@@ -137,10 +175,10 @@ async function main() {
     data: {
       tournamentId: registrationTournament.id,
       applicantId: coach1.id,
-      teamName: 'Уралец',
-      city: 'Екатеринбург',
-      coachName: coach1.name ?? 'Алексей Тренер',
-      playersCount: 18,
+      teamName: 'Uralets',
+      city: 'Ekaterinburg',
+      coachName: coach1.name ?? 'Alexey Coach',
+      playersCount: FULL_SQUAD_SIZE,
       status: ApplicationStatus.APPROVED,
     },
   });
@@ -151,6 +189,9 @@ async function main() {
       city: approvedApplication.city ?? undefined,
       tournamentId: registrationTournament.id,
       coachId: coach1.id,
+      players: {
+        create: buildRoster('Ural'),
+      },
     },
   });
 
@@ -163,11 +204,23 @@ async function main() {
     data: {
       tournamentId: registrationTournament.id,
       applicantId: coach2.id,
-      teamName: 'Факел-М',
-      city: 'Екатеринбург',
-      coachName: coach2.name ?? 'Дмитрий Тренер',
-      playersCount: 16,
+      teamName: 'Fakel-M',
+      city: 'Ekaterinburg',
+      coachName: coach2.name ?? 'Dmitry Coach',
+      playersCount: 20,
       status: ApplicationStatus.PENDING,
+    },
+  });
+
+  await prisma.application.create({
+    data: {
+      tournamentId: registrationTournament.id,
+      applicantId: coach2.id,
+      teamName: 'Meteor-96',
+      city: 'Perm',
+      coachName: coach2.name ?? 'Dmitry Coach',
+      playersCount: 22,
+      status: ApplicationStatus.REJECTED,
     },
   });
 
@@ -182,7 +235,7 @@ async function main() {
       homeTeamId: programmers.id,
       awayTeamId: testers.id,
       refereeId: referee.id,
-      venue: 'Стадион Юность',
+      venue: 'Yunost Stadium',
       date: new Date('2026-04-05T15:00:00.000Z'),
       status: MatchStatus.CONFIRMED,
       homeScore: 2,
@@ -196,7 +249,7 @@ async function main() {
       homeTeamId: analysts.id,
       awayTeamId: ops.id,
       refereeId: referee.id,
-      venue: 'Манеж Восток',
+      venue: 'Vostok Arena',
       date: new Date('2026-04-06T15:00:00.000Z'),
       status: MatchStatus.CONFIRMED,
       homeScore: 0,
@@ -210,11 +263,39 @@ async function main() {
       homeTeamId: programmers.id,
       awayTeamId: analysts.id,
       refereeId: referee.id,
-      venue: 'Стадион Динамо',
+      venue: 'Dinamo Stadium',
       date: new Date('2026-04-12T15:00:00.000Z'),
       status: MatchStatus.AWAITING_CONFIRMATION,
       homeScore: 3,
       awayScore: 2,
+    },
+  });
+
+  await prisma.match.create({
+    data: {
+      tournamentId: activeTournament.id,
+      homeTeamId: testers.id,
+      awayTeamId: ops.id,
+      refereeId: referee.id,
+      venue: 'Meteor Arena',
+      date: new Date('2026-04-19T15:00:00.000Z'),
+      status: MatchStatus.SCHEDULED,
+      homeScore: 0,
+      awayScore: 0,
+    },
+  });
+
+  await prisma.match.create({
+    data: {
+      tournamentId: activeTournament.id,
+      homeTeamId: analysts.id,
+      awayTeamId: programmers.id,
+      refereeId: referee.id,
+      venue: 'Central Stadium',
+      date: new Date('2026-04-26T15:00:00.000Z'),
+      status: MatchStatus.CANCELLED,
+      homeScore: 0,
+      awayScore: 0,
     },
   });
 
@@ -225,42 +306,42 @@ async function main() {
         playerId: programmerPlayers[0].id,
         type: EventType.GOAL,
         minute: 23,
-        comment: 'Удар из-за пределов штрафной',
+        comment: 'Long-range strike',
       },
       {
         matchId: match1.id,
         playerId: testerPlayers[0].id,
         type: EventType.GOAL,
         minute: 45,
-        comment: 'Гол с пенальти',
+        comment: 'Penalty goal',
       },
       {
         matchId: match1.id,
         playerId: programmerPlayers[1].id,
         type: EventType.GOAL,
         minute: 78,
-        comment: 'Решающий мяч после навеса',
+        comment: 'Winning goal after a cross',
       },
       {
         matchId: match1.id,
         playerId: testerPlayers[1].id,
         type: EventType.YELLOW_CARD,
         minute: 64,
-        comment: 'Срыв атаки',
+        comment: 'Tactical foul',
       },
       {
         matchId: match2.id,
         playerId: analystPlayers[0].id,
         type: EventType.YELLOW_CARD,
         minute: 34,
-        comment: 'Тактический фол',
+        comment: 'Tactical foul',
       },
       {
         matchId: match2.id,
         playerId: opsPlayers[1].id,
         type: EventType.RED_CARD,
         minute: 88,
-        comment: 'Вторая жёлтая карточка',
+        comment: 'Second yellow card',
       },
     ],
   });
@@ -269,12 +350,12 @@ async function main() {
 
   console.log('Seed completed successfully');
   console.log('Demo accounts:');
-  console.log('admin@tournament.ru / TestPass123!');
-  console.log('organizer@tournament.ru / TestPass123!');
-  console.log('referee@tournament.ru / TestPass123!');
-  console.log('coach@tournament.ru / TestPass123!');
-  console.log('coach2@team.ru / TestPass123!');
-  console.log('fan@tournament.ru / TestPass123!');
+  console.log(`admin@tournament.ru / ${DEMO_PASSWORD}`);
+  console.log(`org@tournament.ru / ${DEMO_PASSWORD}`);
+  console.log(`referee@tournament.ru / ${DEMO_PASSWORD}`);
+  console.log(`coach@tournament.ru / ${DEMO_PASSWORD}`);
+  console.log(`coach2@team.ru / ${DEMO_PASSWORD}`);
+  console.log(`fan@tournament.ru / ${DEMO_PASSWORD}`);
 }
 
 main()

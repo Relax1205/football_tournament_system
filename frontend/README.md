@@ -53,10 +53,10 @@ npm run dev
 
 ## Тестовые аккаунты
 
-Пароль для всех ролей: `TestPass123!`
+Пароль для всех ролей: `Test123!`
 
 - `admin@tournament.ru`
-- `organizer@tournament.ru`
+- `org@tournament.ru`
 - `referee@tournament.ru`
 - `coach@tournament.ru`
 - `fan@tournament.ru`

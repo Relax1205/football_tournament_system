@@ -53,7 +53,7 @@ export function StandingsClient() {
       <div className="page-head">
         <h1 className="page-title">Турнирная таблица</h1>
         <p className="page-subtitle">
-          Таблица строится по правилам ФИФА: очки, разница голов, забитые голы.
+          Таблица рассчитывается по правилам ФИФА: очки, разница голов, забитые голы.
         </p>
       </div>
       <div className="meta">
@@ -105,7 +105,7 @@ export function StandingsClient() {
         ) : null}
         {selectedTournamentId ? (
           <a className="button button-secondary" href={getStandingsExportUrl(selectedTournamentId)}>
-            Excel
+            Экспорт в Excel
           </a>
         ) : null}
       </div>

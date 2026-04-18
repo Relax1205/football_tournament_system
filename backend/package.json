@@ -6,6 +6,7 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
+    "test:e2e": "tsx test-e2e.ts",
     "db:check": "npm.cmd run build && node dist/scripts/check-db.js",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
