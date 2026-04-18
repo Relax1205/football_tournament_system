@@ -15,8 +15,8 @@ export function LayoutShell({ children }: LayoutShellProps) {
       <HeaderBar />
       {children}
       <div className="footer-note">
-        Демо-авторизация работает локально через mock users и готова к замене
-        на реальный backend.
+        Интерфейс подключён к реальному backend с ролями, заявками, расписанием,
+        таблицей и экспортом отчётов.
       </div>
     </div>
   );

@@ -3,10 +3,10 @@ import { Builder, By, until } from "selenium-webdriver";
 const BASE_URL = process.env.UI_BASE_URL || "http://localhost:3000";
 const BROWSER = process.env.UI_BROWSER || "chrome";
 const DEMO_USERS = {
-  coach: { email: "coach@tournament.ru", password: "Test123!" },
-  fan: { email: "fan@tournament.ru", password: "Test123!" },
-  organizer: { email: "organizer@tournament.ru", password: "Test123!" },
-  referee: { email: "referee@tournament.ru", password: "Test123!" },
+  coach: { email: "coach@tournament.ru", password: "TestPass123!" },
+  fan: { email: "fan@tournament.ru", password: "TestPass123!" },
+  organizer: { email: "organizer@tournament.ru", password: "TestPass123!" },
+  referee: { email: "referee@tournament.ru", password: "TestPass123!" },
 };
 
 async function resetSession(driver) {

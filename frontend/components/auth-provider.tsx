@@ -5,10 +5,10 @@ import {
   ReactNode,
   useContext,
   useEffect,
-  useMemo,
   useState,
 } from "react";
-import { DemoUser, demoUsers, UserRole } from "@/components/mock-data";
+import { DemoUser, UserRole } from "@/components/mock-data";
+import { loginUser } from "@/components/mock-api";
 
 type AuthContextValue = {
   isReady: boolean;
@@ -18,7 +18,8 @@ type AuthContextValue = {
   hasRole: (roles?: UserRole[]) => boolean;
 };
 
-const STORAGE_KEY = "football-tournament-auth";
+const USER_STORAGE_KEY = "football-tournament-auth";
+const TOKEN_STORAGE_KEY = "football-tournament-token";
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
@@ -27,58 +28,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    const saved = window.localStorage.getItem(STORAGE_KEY);
+    const savedUser = window.localStorage.getItem(USER_STORAGE_KEY);
 
-    if (saved) {
-      const parsed = JSON.parse(saved) as DemoUser;
-      setUser(parsed);
+    if (savedUser) {
+      setUser(JSON.parse(savedUser) as DemoUser);
     }
 
     setIsReady(true);
   }, []);
 
-  const login = async (email: string, password: string) => {
-    const normalizedEmail = email.trim().toLowerCase();
-    const foundUser = demoUsers.find(
-      (candidate) =>
-        candidate.email.toLowerCase() === normalizedEmail &&
-        candidate.password === password,
-    );
+  async function login(email: string, password: string) {
+    try {
+      const result = await loginUser(email.trim().toLowerCase(), password);
 
-    if (!foundUser) {
-      return {
-        ok: false,
-        message: "Неверный логин или пароль",
-      };
+      window.localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(result.user));
+      window.localStorage.setItem(TOKEN_STORAGE_KEY, result.token);
+      setUser(result.user);
+
+      return { ok: true };
+    } catch (error) {
+      if (error instanceof Error) {
+        return {
+          ok: false,
+          message:
+            error.message === "Invalid credentials"
+              ? "Неверный логин или пароль"
+              : "Не удалось выполнить вход",
+        };
+      }
+
+      return { ok: false, message: "Не удалось выполнить вход" };
     }
+  }
 
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(foundUser));
-    setUser(foundUser);
-
-    return { ok: true };
-  };
-
-  const logout = () => {
-    window.localStorage.removeItem(STORAGE_KEY);
+  function logout() {
+    window.localStorage.removeItem(USER_STORAGE_KEY);
+    window.localStorage.removeItem(TOKEN_STORAGE_KEY);
     setUser(null);
+  }
+
+  const value: AuthContextValue = {
+    isReady,
+    user,
+    login,
+    logout,
+    hasRole: (roles) => {
+      if (!roles || roles.length === 0) {
+        return Boolean(user);
+      }
+
+      return user ? roles.includes(user.role) : false;
+    },
   };
-
-  const value = useMemo<AuthContextValue>(
-    () => ({
-      isReady,
-      user,
-      login,
-      logout,
-      hasRole: (roles) => {
-        if (!roles || roles.length === 0) {
-          return Boolean(user);
-        }
-
-        return user ? roles.includes(user.role) : false;
-      },
-    }),
-    [isReady, user],
-  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

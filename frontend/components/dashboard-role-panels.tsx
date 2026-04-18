@@ -47,7 +47,7 @@ export function DashboardRolePanels() {
         <div className="section-head">
           <h2 className="section-title">Управление ролями</h2>
           <p className="section-subtitle">
-            Демо-flow администратора: смена роли пользователя без перезагрузки.
+            Администратор может менять роль пользователя без перезагрузки страницы.
           </p>
         </div>
         <div className="table-wrap">

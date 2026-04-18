@@ -10,7 +10,7 @@ export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
   const [email, setEmail] = useState("organizer@tournament.ru");
-  const [password, setPassword] = useState("Test123!");
+  const [password, setPassword] = useState("TestPass123!");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -38,7 +38,7 @@ export default function LoginPage() {
             <div className="page-head">
               <h1 className="page-title">Вход в систему</h1>
               <p className="page-subtitle">
-                Демо-вход для защиты экранов и переключения ролей без backend.
+                Авторизация через backend с тестовыми ролями для защиты экранов и проверки RBAC.
               </p>
             </div>
             <form className="form-grid" onSubmit={handleSubmit}>

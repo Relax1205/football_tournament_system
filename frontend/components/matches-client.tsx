@@ -2,8 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
-import { confirmMatch, listMatches, saveMatchResult } from "@/components/mock-api";
-import { MatchEventType, MatchRecord, MatchStatus } from "@/components/mock-data";
+import {
+  confirmMatch,
+  getMatchReportUrl,
+  listMatches,
+  listPlayers,
+  saveMatchResult,
+} from "@/components/mock-api";
+import { MatchEventType, MatchRecord, MatchStatus, PlayerRecord } from "@/components/mock-data";
 
 type MatchForm = {
   awayScore: string;
@@ -12,45 +18,81 @@ type MatchForm = {
   eventType: MatchEventType;
   homeScore: string;
   matchId: string;
+  playerId: string;
   status: MatchStatus;
+};
+
+const initialForm: MatchForm = {
+  awayScore: "0",
+  comment: "",
+  eventMinute: "1",
+  eventType: "goal",
+  homeScore: "0",
+  matchId: "",
+  playerId: "",
+  status: "Требует подтверждения",
 };
 
 export function MatchesClient() {
   const { user } = useAuth();
   const [items, setItems] = useState<MatchRecord[]>([]);
+  const [players, setPlayers] = useState<PlayerRecord[]>([]);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortKey, setSortKey] = useState<"date" | "status" | "home">("date");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [success, setSuccess] = useState("");
-  const [form, setForm] = useState<MatchForm>({
-    awayScore: "0",
-    comment: "",
-    eventMinute: "",
-    eventType: "goal",
-    homeScore: "0",
-    matchId: "M-101",
-    status: "Требует подтверждения",
-  });
+  const [form, setForm] = useState<MatchForm>(initialForm);
 
   useEffect(() => {
-    listMatches().then(setItems);
+    void Promise.all([listMatches(), listPlayers()]).then(([loadedMatches, loadedPlayers]) => {
+      setItems(loadedMatches);
+      setPlayers(loadedPlayers);
+
+      const firstMatch = loadedMatches[0];
+      if (firstMatch) {
+        const firstPlayer = loadedPlayers.find(
+          (player) =>
+            player.teamId === firstMatch.homeTeamId || player.teamId === firstMatch.awayTeamId,
+        );
+
+        setForm((current) => ({
+          ...current,
+          matchId: firstMatch.id,
+          homeScore: String(firstMatch.homeScore),
+          awayScore: String(firstMatch.awayScore),
+          playerId: firstPlayer?.id ?? "",
+        }));
+      }
+    });
   }, []);
 
   const filteredItems = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
 
     return [...items]
+      .filter((match) => (statusFilter === "all" ? true : match.status === statusFilter))
       .filter((match) =>
-        statusFilter === "all" ? true : match.status === statusFilter,
+        `${match.home} ${match.away} ${match.venue}`.toLowerCase().includes(normalizedQuery),
       )
-      .filter((match) =>
-        `${match.home} ${match.away} ${match.venue}`
-          .toLowerCase()
-          .includes(normalizedQuery),
-      )
-      .sort((a, b) => String(a[sortKey]).localeCompare(String(b[sortKey]), "ru"));
+      .sort((left, right) => String(left[sortKey]).localeCompare(String(right[sortKey]), "ru"));
   }, [items, query, sortKey, statusFilter]);
+
+  const currentMatch = useMemo(
+    () => items.find((match) => match.id === form.matchId) ?? null,
+    [form.matchId, items],
+  );
+
+  const availablePlayers = useMemo(() => {
+    if (!currentMatch) {
+      return [];
+    }
+
+    return players.filter(
+      (player) =>
+        player.teamId === currentMatch.homeTeamId || player.teamId === currentMatch.awayTeamId,
+    );
+  }, [currentMatch, players]);
 
   function validate() {
     const nextErrors: Record<string, string> = {};
@@ -70,7 +112,7 @@ export function MatchesClient() {
       nextErrors.awayScore = "Счёт должен быть целым и неотрицательным";
     }
 
-    if (!Number.isInteger(eventMinute) || eventMinute < 1 || eventMinute > 120) {
+    if (form.eventMinute && (!Number.isInteger(eventMinute) || eventMinute < 1 || eventMinute > 120)) {
       nextErrors.eventMinute = "Минута события должна быть от 1 до 120";
     }
 
@@ -98,12 +140,11 @@ export function MatchesClient() {
       eventType: form.eventType,
       homeScore: Number(form.homeScore),
       matchId: form.matchId,
+      playerId: form.playerId || undefined,
       status: user?.role === "organizer" ? "Подтверждён" : form.status,
     });
 
-    setItems((current) =>
-      current.map((match) => (match.id === updated.id ? updated : match)),
-    );
+    setItems((current) => current.map((match) => (match.id === updated.id ? updated : match)));
     setSuccess(
       user?.role === "organizer"
         ? "Результат сохранён и подтверждён"
@@ -117,7 +158,7 @@ export function MatchesClient() {
         <div className="page-head">
           <h1 className="page-title">Матчи и результаты</h1>
           <p className="page-subtitle">
-            Рабочая таблица с поиском, фильтрацией и статусными действиями.
+            Рабочая таблица с поиском, фильтрацией, подтверждением результата и скачиванием протокола.
           </p>
         </div>
         <div className="toolbar">
@@ -127,20 +168,15 @@ export function MatchesClient() {
             placeholder="Поиск по команде или стадиону"
             value={query}
           />
-          <select
-            onChange={(event) => setStatusFilter(event.target.value)}
-            value={statusFilter}
-          >
+          <select onChange={(event) => setStatusFilter(event.target.value)} value={statusFilter}>
             <option value="all">Все статусы</option>
             <option value="Запланирован">Запланирован</option>
-            <option value="Черновик">Черновик</option>
             <option value="Требует подтверждения">Требует подтверждения</option>
             <option value="Подтверждён">Подтверждён</option>
+            <option value="Отменён">Отменён</option>
           </select>
           <select
-            onChange={(event) =>
-              setSortKey(event.target.value as "date" | "status" | "home")
-            }
+            onChange={(event) => setSortKey(event.target.value as "date" | "status" | "home")}
             value={sortKey}
           >
             <option value="date">Сортировка: дата</option>
@@ -177,25 +213,25 @@ export function MatchesClient() {
                   <td>{match.referee}</td>
                   <td>{match.status}</td>
                   <td>
-                    {user?.role === "organizer" &&
-                    match.status === "Требует подтверждения" ? (
-                      <button
-                        className="button button-secondary"
-                        onClick={async () => {
-                          const updated = await confirmMatch(match.id);
-                          setItems((current) =>
-                            current.map((item) =>
-                              item.id === updated.id ? updated : item,
-                            ),
-                          );
-                        }}
-                        type="button"
-                      >
-                        Подтвердить
-                      </button>
-                    ) : (
-                      <span className="table-muted">Просмотр</span>
-                    )}
+                    <div className="inline-actions">
+                      {user?.role === "organizer" && match.status === "Требует подтверждения" ? (
+                        <button
+                          className="button button-secondary"
+                          onClick={async () => {
+                            const updated = await confirmMatch(match.id);
+                            setItems((current) =>
+                              current.map((item) => (item.id === updated.id ? updated : item)),
+                            );
+                          }}
+                          type="button"
+                        >
+                          Подтвердить
+                        </button>
+                      ) : null}
+                      <a className="button button-secondary" href={getMatchReportUrl(match.id)}>
+                        PDF
+                      </a>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -208,7 +244,7 @@ export function MatchesClient() {
         <div className="section-head">
           <h2 className="section-title">Ввод результата матча</h2>
           <p className="section-subtitle">
-            Судья отправляет результат, организатор может сразу подтвердить.
+            Судья отправляет результат и событие матча, организатор может сразу подтвердить итог.
           </p>
         </div>
         <form className="form-grid" onSubmit={handleSubmit}>
@@ -216,17 +252,30 @@ export function MatchesClient() {
             <label htmlFor="match-id">Матч</label>
             <select
               id="match-id"
-              onChange={(event) =>
-                setForm((current) => ({ ...current, matchId: event.target.value }))
-              }
+              onChange={(event) => {
+                const nextMatch = items.find((match) => match.id === event.target.value);
+                const nextPlayer = players.find(
+                  (player) =>
+                    player.teamId === nextMatch?.homeTeamId || player.teamId === nextMatch?.awayTeamId,
+                );
+
+                setForm((current) => ({
+                  ...current,
+                  matchId: event.target.value,
+                  homeScore: String(nextMatch?.homeScore ?? current.homeScore),
+                  awayScore: String(nextMatch?.awayScore ?? current.awayScore),
+                  playerId: nextPlayer?.id ?? "",
+                }));
+              }}
               value={form.matchId}
             >
               {items.map((match) => (
                 <option key={match.id} value={match.id}>
-                  {match.id} - {match.home} / {match.away}
+                  {match.home} / {match.away}
                 </option>
               ))}
             </select>
+            {errors.matchId ? <span className="field-error">{errors.matchId}</span> : null}
           </div>
           <div className="field">
             <label htmlFor="status">Статус</label>
@@ -240,11 +289,8 @@ export function MatchesClient() {
               }
               value={form.status}
             >
-              <option value="Черновик">Черновик</option>
               <option value="Требует подтверждения">Требует подтверждения</option>
-              {user?.role === "organizer" ? (
-                <option value="Подтверждён">Подтверждён</option>
-              ) : null}
+              {user?.role === "organizer" ? <option value="Подтверждён">Подтверждён</option> : null}
             </select>
           </div>
           <div className="field">
@@ -261,9 +307,7 @@ export function MatchesClient() {
               type="number"
               value={form.homeScore}
             />
-            {errors.homeScore ? (
-              <span className="field-error">{errors.homeScore}</span>
-            ) : null}
+            {errors.homeScore ? <span className="field-error">{errors.homeScore}</span> : null}
           </div>
           <div className="field">
             <label htmlFor="away-score">Голы гостей</label>
@@ -279,9 +323,26 @@ export function MatchesClient() {
               type="number"
               value={form.awayScore}
             />
-            {errors.awayScore ? (
-              <span className="field-error">{errors.awayScore}</span>
-            ) : null}
+            {errors.awayScore ? <span className="field-error">{errors.awayScore}</span> : null}
+          </div>
+          <div className="field">
+            <label htmlFor="event-player">Игрок</label>
+            <select
+              id="event-player"
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  playerId: event.target.value,
+                }))
+              }
+              value={form.playerId}
+            >
+              {availablePlayers.map((player) => (
+                <option key={player.id} value={player.id}>
+                  {player.name} · {player.team}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="field">
             <label htmlFor="event-minute">Минута события</label>
@@ -298,9 +359,7 @@ export function MatchesClient() {
               type="number"
               value={form.eventMinute}
             />
-            {errors.eventMinute ? (
-              <span className="field-error">{errors.eventMinute}</span>
-            ) : null}
+            {errors.eventMinute ? <span className="field-error">{errors.eventMinute}</span> : null}
           </div>
           <div className="field">
             <label htmlFor="event-type">Событие</label>
@@ -317,6 +376,7 @@ export function MatchesClient() {
               <option value="goal">Гол</option>
               <option value="yellow">Жёлтая карточка</option>
               <option value="red">Красная карточка</option>
+              <option value="substitution">Замена</option>
             </select>
           </div>
           <div className="field field-wide">
@@ -324,14 +384,15 @@ export function MatchesClient() {
             <input
               id="comment"
               onChange={(event) =>
-                setForm((current) => ({ ...current, comment: event.target.value }))
+                setForm((current) => ({
+                  ...current,
+                  comment: event.target.value,
+                }))
               }
               placeholder="Например, данные проверены после матча"
               value={form.comment}
             />
-            {errors.comment ? (
-              <span className="field-error">{errors.comment}</span>
-            ) : null}
+            {errors.comment ? <span className="field-error">{errors.comment}</span> : null}
           </div>
           {success ? (
             <div className="field field-wide">

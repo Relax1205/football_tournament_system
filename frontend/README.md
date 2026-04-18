@@ -1,23 +1,17 @@
 # Frontend
 
-Фронтенд учебного проекта **«Система учёта футбольных турниров»**.
+Frontend проекта **«Система учёта футбольных турниров»** на `Next.js 14`.
 
-Этот каталог содержит:
+## Назначение
 
-- пользовательский интерфейс на `Next.js + React + TypeScript`
-- mock-авторизацию и разграничение ролей
-- UI-компоненты, формы и базовую клиентскую валидацию
-- адаптивную стилизацию
-- документацию пользователя в формате wiki
+Интерфейс покрывает ключевые требования из ТЗ:
 
-## Реализовано в текущей версии
-
-- главная страница, вход и личный кабинет
-- турниры с поиском, фильтрацией, сортировкой и созданием
-- матчи с вводом результата и подтверждением
-- турнирная таблица
+- вход по ролям и защита разделов
+- турниры и генерация расписания
+- матчи, ввод результата и подтверждение
+- таблица и экспорт в `Excel`
 - команды, заявки и статистика игроков
-- mock API слой для демонстрации сценариев
+- управление ролями пользователей
 
 ## Структура
 
@@ -41,36 +35,43 @@ components/
   teams-client.tsx
   tournaments-client.tsx
 docs/
-  wiki/
   testing/
+  wiki/
+tests/
+  ui/
 ```
-
-## Документация
-
-- Пользовательская документация: [docs/wiki/Home.md](docs/wiki/Home.md)
-- QA-документация: [docs/testing/test-cases.md](docs/testing/test-cases.md)
-- Чек-лист: [docs/testing/checklist.md](docs/testing/checklist.md)
-- Матрица требований: [docs/testing/requirements-test-matrix.md](docs/testing/requirements-test-matrix.md)
-- Программа испытаний: [docs/testing/test-program.md](docs/testing/test-program.md)
-- Отчёт о ручном тестировании: [docs/testing/manual-test-report.md](docs/testing/manual-test-report.md)
-- Инструменты тестирования: [docs/testing/testing-tools.md](docs/testing/testing-tools.md)
-
-## UI-автотесты
-
-- Каркас Selenium WebDriver: [tests/ui/run-ui-tests.mjs](tests/ui/run-ui-tests.mjs)
-- Инструкция по запуску: [tests/ui/README.md](tests/ui/README.md)
 
 ## Запуск
 
 ```bash
-nvm use 22
+copy .env.example .env.local
 npm install
 npm run dev
 ```
 
-## Текущие ограничения
+По умолчанию frontend ожидает backend на `http://localhost:4000`.
 
-- используется mock API вместо backend
-- экспорт в PDF и Excel пока не реализован
-- Selenium WebDriver подготовлен как стартовый каркас и требует установки браузерного драйвера
-- GitHub Wiki ещё не опубликована, но локальные страницы уже подготовлены в `docs/wiki/`
+## Тестовые аккаунты
+
+Пароль для всех ролей: `TestPass123!`
+
+- `admin@tournament.ru`
+- `organizer@tournament.ru`
+- `referee@tournament.ru`
+- `coach@tournament.ru`
+- `fan@tournament.ru`
+
+## UI-автотесты
+
+```bash
+npm run test:ui
+```
+
+Для запуска Selenium необходим установленный драйвер браузера.
+
+## Документация
+
+- Пользовательская документация: [docs/wiki/Home.md](docs/wiki/Home.md)
+- Программа испытаний: [docs/testing/test-program.md](docs/testing/test-program.md)
+- Тест-кейсы: [docs/testing/test-cases.md](docs/testing/test-cases.md)
+- Матрица требований: [docs/testing/requirements-test-matrix.md](docs/testing/requirements-test-matrix.md)

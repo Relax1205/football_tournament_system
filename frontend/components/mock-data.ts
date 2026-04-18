@@ -1,9 +1,4 @@
-export type UserRole =
-  | "admin"
-  | "organizer"
-  | "referee"
-  | "coach"
-  | "fan";
+export type UserRole = "admin" | "organizer" | "referee" | "coach" | "fan";
 
 export type DemoUser = {
   id: string;
@@ -18,7 +13,8 @@ export type TournamentStatus =
   | "Идёт регистрация"
   | "Матчи опубликованы"
   | "Активен"
-  | "Завершён";
+  | "Завершён"
+  | "Отменён";
 
 export type Tournament = {
   id: string;
@@ -29,35 +25,54 @@ export type Tournament = {
   groups: number;
   teams: number;
   matches: number;
+  applications?: number;
   status: TournamentStatus;
+  apiStatus?: string;
+  description?: string;
 };
 
 export type MatchStatus =
   | "Запланирован"
-  | "Черновик"
   | "Требует подтверждения"
-  | "Подтверждён";
+  | "Подтверждён"
+  | "Отменён";
 
-export type MatchEventType = "goal" | "yellow" | "red";
+export type MatchEventType = "goal" | "yellow" | "red" | "substitution";
+
+export type MatchEventRecord = {
+  id: string;
+  minute: number;
+  type: MatchEventType;
+  playerId: string;
+  playerName: string;
+  teamId?: string;
+  comment?: string;
+};
 
 export type MatchRecord = {
   id: string;
   tournamentId: string;
+  tournament?: string;
   date: string;
   time: string;
   home: string;
   away: string;
+  homeTeamId: string;
+  awayTeamId: string;
   venue: string;
   referee: string;
+  refereeId?: string;
   status: MatchStatus;
+  apiStatus?: string;
   homeScore: number;
   awayScore: number;
-  eventMinute?: number;
-  eventType?: MatchEventType;
-  comment?: string;
+  events?: MatchEventRecord[];
 };
 
 export type StandingRecord = {
+  id?: string;
+  tournamentId?: string;
+  teamId: string;
   position: number;
   team: string;
   played: number;
@@ -71,8 +86,11 @@ export type StandingRecord = {
 
 export type PlayerRecord = {
   id: string;
+  firstName: string;
+  lastName: string;
   name: string;
-  number: number;
+  number: number | null;
+  teamId: string;
   team: string;
   goals: number;
   yellow: number;
@@ -91,7 +109,24 @@ export type ApplicationRecord = {
   coach: string;
   playersCount: number;
   tournament: string;
+  tournamentId: string;
   status: ApplicationStatus;
+  approvedTeamId?: string | null;
+};
+
+export type TeamRecord = {
+  id: string;
+  name: string;
+  city?: string;
+  tournamentId: string;
+  coachName?: string;
+  playersCount: number;
+  players?: Array<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    number: number | null;
+  }>;
 };
 
 export const roleLabels: Record<UserRole, string> = {
@@ -104,267 +139,119 @@ export const roleLabels: Record<UserRole, string> = {
 
 export const demoUsers: DemoUser[] = [
   {
-    id: "U-001",
-    name: "Алексей Румянцев",
+    id: "demo-organizer",
+    name: "Мария Организатор",
     email: "organizer@tournament.ru",
-    password: "Test123!",
+    password: "TestPass123!",
     role: "organizer",
   },
   {
-    id: "U-002",
+    id: "demo-referee",
     name: "Сергей Судья",
     email: "referee@tournament.ru",
-    password: "Test123!",
+    password: "TestPass123!",
     role: "referee",
   },
   {
-    id: "U-003",
-    name: "Андрей Смирнов",
+    id: "demo-coach",
+    name: "Алексей Тренер",
     email: "coach@tournament.ru",
-    password: "Test123!",
+    password: "TestPass123!",
     role: "coach",
     team: "Уралец",
   },
   {
-    id: "U-004",
-    name: "Мария Админ",
+    id: "demo-admin",
+    name: "Иван Администратор",
     email: "admin@tournament.ru",
-    password: "Test123!",
+    password: "TestPass123!",
     role: "admin",
   },
   {
-    id: "U-005",
+    id: "demo-fan",
     name: "Максим Болельщик",
     email: "fan@tournament.ru",
-    password: "Test123!",
+    password: "TestPass123!",
     role: "fan",
-    team: "Уралец",
+    team: "ФК Программисты",
   },
 ];
 
-export const initialTournaments: Tournament[] = [
-  {
-    id: "T-001",
-    name: "Весенний кубок Екатеринбурга",
-    format: "Групповой этап + плей-офф",
-    startDate: "2026-04-14",
-    endDate: "2026-05-28",
-    groups: 2,
-    teams: 12,
-    matches: 18,
-    status: "Идёт регистрация",
-  },
-  {
-    id: "T-002",
-    name: "Лига студенческих команд",
-    format: "Круговая система",
-    startDate: "2026-05-01",
-    endDate: "2026-06-20",
-    groups: 1,
-    teams: 8,
-    matches: 28,
-    status: "Матчи опубликованы",
-  },
+export const tournamentStatusOptions: TournamentStatus[] = [
+  "Идёт регистрация",
+  "Матчи опубликованы",
+  "Активен",
+  "Завершён",
+  "Отменён",
 ];
 
-export const initialMatches: MatchRecord[] = [
-  {
-    id: "M-101",
-    tournamentId: "T-001",
-    date: "2026-04-16",
-    time: "18:30",
-    home: "Уралец",
-    away: "Факел-М",
-    venue: "Стадион Юность",
-    referee: "Сергей Судья",
-    status: "Требует подтверждения",
-    homeScore: 2,
-    awayScore: 1,
-    eventMinute: 74,
-    eventType: "goal",
-    comment: "Результат внесён после финального свистка",
-  },
-  {
-    id: "M-102",
-    tournamentId: "T-002",
-    date: "2026-04-17",
-    time: "20:00",
-    home: "Смена",
-    away: "Вектор",
-    venue: "Манеж Восток",
-    referee: "Сергей Судья",
-    status: "Запланирован",
-    homeScore: 0,
-    awayScore: 0,
-  },
-  {
-    id: "M-103",
-    tournamentId: "T-001",
-    date: "2026-04-19",
-    time: "16:00",
-    home: "Уралец",
-    away: "Спартак-Юниор",
-    venue: "Стадион Динамо",
-    referee: "Сергей Судья",
-    status: "Подтверждён",
-    homeScore: 3,
-    awayScore: 0,
-    eventMinute: 61,
-    eventType: "goal",
-    comment: "Организатор подтвердил без замечаний",
-  },
-];
-
-export const initialStandings: StandingRecord[] = [
-  {
-    position: 1,
-    team: "Уралец",
-    played: 4,
-    won: 3,
-    draw: 1,
-    lost: 0,
-    goals: "10-4",
-    diff: 6,
-    points: 10,
-  },
-  {
-    position: 2,
-    team: "Вектор",
-    played: 4,
-    won: 3,
-    draw: 0,
-    lost: 1,
-    goals: "8-5",
-    diff: 3,
-    points: 9,
-  },
-  {
-    position: 3,
-    team: "Факел-М",
-    played: 4,
-    won: 1,
-    draw: 2,
-    lost: 1,
-    goals: "6-6",
-    diff: 0,
-    points: 5,
-  },
-  {
-    position: 4,
-    team: "Смена",
-    played: 4,
-    won: 0,
-    draw: 1,
-    lost: 3,
-    goals: "3-12",
-    diff: -9,
-    points: 1,
-  },
-];
-
-export const initialPlayers: PlayerRecord[] = [
-  {
-    id: "P-001",
-    name: "Иван Петров",
-    number: 9,
-    team: "Уралец",
-    goals: 5,
-    yellow: 1,
-    red: 0,
-  },
-  {
-    id: "P-002",
-    name: "Максим Орлов",
-    number: 10,
-    team: "Вектор",
-    goals: 4,
-    yellow: 0,
-    red: 0,
-  },
-  {
-    id: "P-003",
-    name: "Артём Левин",
-    number: 7,
-    team: "Факел-М",
-    goals: 2,
-    yellow: 2,
-    red: 0,
-  },
-  {
-    id: "P-004",
-    name: "Дмитрий Соколов",
-    number: 3,
-    team: "Смена",
-    goals: 1,
-    yellow: 1,
-    red: 1,
-  },
-];
-
-export const initialApplications: ApplicationRecord[] = [
-  {
-    id: "A-201",
-    team: "Уралец",
-    city: "Екатеринбург",
-    coach: "Андрей Смирнов",
-    playersCount: 18,
-    tournament: "Весенний кубок Екатеринбурга",
-    status: "На рассмотрении",
-  },
-  {
-    id: "A-202",
-    team: "Факел-М",
-    city: "Екатеринбург",
-    coach: "Игорь Лаптев",
-    playersCount: 16,
-    tournament: "Лига студенческих команд",
-    status: "Одобрена",
-  },
-];
-
-export const frontendScope = [
-  "Авторизация и разграничение интерфейса по ролям",
-  "Формы создания турнира, подачи заявки и ввода результата",
-  "Турнирная таблица, расписание и статистика игроков",
-  "Адаптивность для телефона судьи и десктопа организатора",
-  "Подготовка интерфейса к ручному тестированию и Selenium",
-];
-
-export const dashboardCardsByRole: Record<
-  UserRole,
-  { title: string; value: string; caption: string }[]
-> = {
-  admin: [
-    { title: "Пользователи", value: "48", caption: "активных аккаунтов" },
-    { title: "Роли", value: "5", caption: "типов доступа" },
-    {
-      title: "Безопасность",
-      value: "RBAC",
-      caption: "контроль доступа включён",
-    },
-  ],
-  organizer: [
-    { title: "Турниры", value: "2", caption: "активных соревнования" },
-    { title: "Матчи", value: "46", caption: "в календаре турниров" },
-    { title: "Заявки", value: "7", caption: "ожидают решения" },
-  ],
-  referee: [
-    { title: "Сегодня", value: "3", caption: "матча на судействе" },
-    { title: "Черновики", value: "1", caption: "результат ждёт отправки" },
-    {
-      title: "Подтверждение",
-      value: "2",
-      caption: "матча ждут организатора",
-    },
-  ],
-  coach: [
-    { title: "Команда", value: "18", caption: "игроков в заявке" },
-    { title: "Ближайший матч", value: "16.04", caption: "против Факел-М" },
-    { title: "Статистика", value: "5", caption: "голов у лучшего бомбардира" },
-  ],
-  fan: [
-    { title: "Матчи команды", value: "4", caption: "в этом месяце" },
-    { title: "Место", value: "1", caption: "в турнирной таблице" },
-    { title: "Голы", value: "10", caption: "забито в турнире" },
-  ],
+export const backendTournamentStatusToLabel: Record<string, TournamentStatus> = {
+  DRAFT: "Идёт регистрация",
+  REGISTRATION_OPEN: "Идёт регистрация",
+  IN_PROGRESS: "Активен",
+  FINISHED: "Завершён",
+  CANCELLED: "Отменён",
 };
+
+export const labelToBackendTournamentStatus: Record<TournamentStatus, string> = {
+  "Идёт регистрация": "REGISTRATION_OPEN",
+  "Матчи опубликованы": "IN_PROGRESS",
+  "Активен": "IN_PROGRESS",
+  "Завершён": "FINISHED",
+  "Отменён": "CANCELLED",
+};
+
+export const backendTournamentFormatToLabel: Record<string, string> = {
+  LEAGUE: "Круговая система",
+  KNOCKOUT: "Плей-офф",
+  GROUPS: "Группы + плей-офф",
+};
+
+export const labelToBackendTournamentFormat: Record<string, string> = {
+  "Круговая система": "LEAGUE",
+  "Плей-офф": "KNOCKOUT",
+  "Группы + плей-офф": "GROUPS",
+  "Групповой этап + плей-офф": "GROUPS",
+};
+
+export const backendMatchStatusToLabel: Record<string, MatchStatus> = {
+  SCHEDULED: "Запланирован",
+  AWAITING_CONFIRMATION: "Требует подтверждения",
+  CONFIRMED: "Подтверждён",
+  CANCELLED: "Отменён",
+};
+
+export const backendApplicationStatusToLabel: Record<string, ApplicationStatus> = {
+  PENDING: "На рассмотрении",
+  APPROVED: "Одобрена",
+  REJECTED: "Отклонена",
+};
+
+export const labelToBackendApplicationStatus: Record<ApplicationStatus, string> = {
+  "На рассмотрении": "PENDING",
+  "Одобрена": "APPROVED",
+  "Отклонена": "REJECTED",
+};
+
+export const labelToBackendUserRole: Record<UserRole, string> = {
+  admin: "ADMIN",
+  organizer: "ORGANIZER",
+  referee: "REFEREE",
+  coach: "COACH",
+  fan: "VIEWER",
+};
+
+export function toFrontendRole(role: string): UserRole {
+  switch (role) {
+    case "ADMIN":
+      return "admin";
+    case "ORGANIZER":
+      return "organizer";
+    case "REFEREE":
+      return "referee";
+    case "COACH":
+      return "coach";
+    default:
+      return "fan";
+  }
+}

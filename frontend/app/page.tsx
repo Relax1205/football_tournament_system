@@ -1,8 +1,22 @@
-import { LayoutShell } from "@/components/layout-shell";
-import { initialMatches, initialTournaments } from "@/components/mock-data";
+"use client";
+
+import { useEffect, useState } from "react";
 import { HeroActions } from "@/components/hero-actions";
+import { LayoutShell } from "@/components/layout-shell";
+import { listMatches, listTournaments } from "@/components/mock-api";
+import { MatchRecord, Tournament } from "@/components/mock-data";
 
 export default function HomePage() {
+  const [matches, setMatches] = useState<MatchRecord[]>([]);
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+
+  useEffect(() => {
+    void Promise.all([listTournaments(), listMatches()]).then(([loadedTournaments, loadedMatches]) => {
+      setTournaments(loadedTournaments);
+      setMatches(loadedMatches);
+    });
+  }, []);
+
   return (
     <LayoutShell>
       <main className="page-layout">
@@ -11,27 +25,27 @@ export default function HomePage() {
             <span className="pill hero-pill">Football Tournament System</span>
             <h1>Система учёта футбольных турниров для организаторов, судей и команд</h1>
             <p>
-              Платформа помогает вести турнир в одном месте: публиковать
-              расписание, фиксировать результаты матчей, считать таблицу и
-              работать с заявками команд без ручных Excel-файлов и переписок.
+              Платформа объединяет регистрацию команд, календарь матчей, ввод результатов,
+              подтверждение протоколов, турнирную таблицу, статистику игроков и экспорт отчётов
+              в одном интерфейсе.
             </p>
             <HeroActions />
           </div>
           <div className="hero-side">
             <div className="stat-card">
               <span>Турниры</span>
-              <strong>{initialTournaments.length}</strong>
-              <span>регистрация, группы, матчи и статусы соревнований</span>
+              <strong>{tournaments.length}</strong>
+              <span>регистрация, статусы, команды, расписание и управление соревнованиями</span>
             </div>
             <div className="stat-card">
               <span>Пользовательские роли</span>
               <strong>5</strong>
-              <span>администратор, организатор, судья, тренер и зритель</span>
+              <span>администратор, организатор, судья, тренер и болельщик</span>
             </div>
             <div className="stat-card">
-              <span>Ближайшие матчи</span>
-              <strong>{initialMatches.length}</strong>
-              <span>календарь игр, результаты и подтверждение судейских данных</span>
+              <span>Матчи</span>
+              <strong>{matches.length}</strong>
+              <span>календарь игр, результаты, подтверждение и экспорт протоколов</span>
             </div>
           </div>
         </section>
@@ -39,15 +53,15 @@ export default function HomePage() {
         <section className="hero-band">
           <div className="hero-band-card">
             <span>Для организатора</span>
-            <strong>Создание турниров, заявки команд и контроль результатов</strong>
+            <strong>Создание турниров, генерация расписания, заявки команд и подтверждение результатов</strong>
           </div>
           <div className="hero-band-card">
             <span>Для судьи</span>
-            <strong>Ввод счёта, событий матча и отправка результата на подтверждение</strong>
+            <strong>Ввод счёта, событий матча и передача результата на подтверждение</strong>
           </div>
           <div className="hero-band-card">
             <span>Для команды и зрителей</span>
-            <strong>Таблица, расписание, статистика игроков и текущий статус турнира</strong>
+            <strong>Таблица, календарь, статистика игроков и актуальный статус турнира</strong>
           </div>
         </section>
 
@@ -56,32 +70,32 @@ export default function HomePage() {
             <div className="section-head">
               <h2 className="section-title">Что умеет система</h2>
               <p className="section-subtitle">
-                Ключевые задачи, ради которых создаётся система учёта турниров.
+                Функции, которые напрямую соответствуют техническому заданию и практическим работам.
               </p>
             </div>
             <ul className="list">
               <li className="list-item">
                 <div>
                   <strong>Управление турнирами</strong>
-                  Создание соревнований, настройка формата, дат и этапов.
+                  Создание турниров, выбор формата, статусы проведения и контроль состава участников.
                 </div>
               </li>
               <li className="list-item">
                 <div>
                   <strong>Работа с командами</strong>
-                  Заявки на участие, просмотр состава и контроль статуса допуска.
+                  Заявки, одобрение организатором, добавление игроков и просмотр составов.
                 </div>
               </li>
               <li className="list-item">
                 <div>
                   <strong>Матчи и результаты</strong>
-                  Расписание игр, ввод счёта и подтверждение итогов матча.
+                  Автоматическая генерация расписания, ручное добавление матча, ввод счёта и событий.
                 </div>
               </li>
               <li className="list-item">
                 <div>
-                  <strong>Таблица и статистика</strong>
-                  Положение команд, голы, карточки и сводная турнирная информация.
+                  <strong>Таблица и отчёты</strong>
+                  Пересчёт турнирной таблицы по правилам ФИФА, PDF-протокол матча и Excel-экспорт.
                 </div>
               </li>
             </ul>
@@ -91,32 +105,32 @@ export default function HomePage() {
             <div className="section-head">
               <h2 className="section-title">Для кого подходит интерфейс</h2>
               <p className="section-subtitle">
-                Основные сценарии для разных участников турнира.
+                Роли и пользовательские сценарии из отчётов по предметной области.
               </p>
             </div>
             <ul className="list">
               <li className="list-item">
                 <div>
                   <strong>Организатор турнира</strong>
-                  Создаёт турнир, рассматривает заявки и подтверждает результаты.
+                  Создаёт турнир, рассматривает заявки, формирует календарь и подтверждает итоги матчей.
                 </div>
               </li>
               <li className="list-item">
                 <div>
                   <strong>Судья матча</strong>
-                  Быстро вносит результат, счёт и ключевые события встречи.
+                  Вносит результат, игровые события и отправляет встречу на подтверждение.
                 </div>
               </li>
               <li className="list-item">
                 <div>
                   <strong>Тренер команды</strong>
-                  Следит за статистикой игроков и отправляет заявку на участие.
+                  Подаёт заявку на участие, добавляет игроков и отслеживает статистику состава.
                 </div>
               </li>
               <li className="list-item">
                 <div>
-                  <strong>Зритель и участник</strong>
-                  Смотрит календарь матчей, турнирную таблицу и текущее состояние турнира.
+                  <strong>Игрок и болельщик</strong>
+                  Просматривает таблицу, расписание матчей и текущую форму турнира.
                 </div>
               </li>
             </ul>
@@ -128,12 +142,11 @@ export default function HomePage() {
             <div className="section-head">
               <h2 className="section-title">Активные турниры</h2>
               <p className="section-subtitle">
-                Карточки главного экрана с ключевой информацией по текущим
-                соревнованиям.
+                Данные загружаются из backend и отражают текущее состояние системы.
               </p>
             </div>
             <ul className="list">
-              {initialTournaments.map((tournament) => (
+              {tournaments.map((tournament) => (
                 <li key={tournament.id} className="list-item">
                   <div>
                     <strong>{tournament.name}</strong>
@@ -155,7 +168,7 @@ export default function HomePage() {
               </p>
             </div>
             <ul className="list">
-              {initialMatches.map((match) => (
+              {matches.slice(0, 5).map((match) => (
                 <li key={match.id} className="list-item">
                   <div>
                     <strong>

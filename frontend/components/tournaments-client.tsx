@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { createTournament, listTournaments } from "@/components/mock-api";
+import { createTournament, generateSchedule, listTournaments } from "@/components/mock-api";
 import { Tournament, TournamentStatus } from "@/components/mock-data";
 
 type TournamentForm = {
@@ -22,17 +22,35 @@ const initialForm: TournamentForm = {
   status: "Идёт регистрация",
 };
 
+type ScheduleForm = {
+  daysBetweenRounds: string;
+  startDate: string;
+  tournamentId: string;
+};
+
 export function TournamentsClient() {
   const [items, setItems] = useState<Tournament[]>([]);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortKey, setSortKey] = useState<"name" | "teams" | "status">("name");
   const [form, setForm] = useState<TournamentForm>(initialForm);
+  const [scheduleForm, setScheduleForm] = useState<ScheduleForm>({
+    daysBetweenRounds: "7",
+    startDate: "",
+    tournamentId: "",
+  });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [scheduleErrors, setScheduleErrors] = useState<Record<string, string>>({});
   const [success, setSuccess] = useState("");
 
   useEffect(() => {
-    listTournaments().then(setItems);
+    listTournaments().then((loaded) => {
+      setItems(loaded);
+      setScheduleForm((current) => ({
+        ...current,
+        tournamentId: current.tournamentId || loaded[0]?.id || "",
+      }));
+    });
   }, []);
 
   const filteredItems = useMemo(() => {
@@ -101,6 +119,51 @@ export function TournamentsClient() {
     setItems((current) => [created, ...current]);
     setForm(initialForm);
     setSuccess(`Турнир "${created.name}" успешно создан`);
+    setScheduleForm((current) => ({
+      ...current,
+      tournamentId: created.id,
+      startDate: form.startDate,
+    }));
+  }
+
+  function validateSchedule() {
+    const nextErrors: Record<string, string> = {};
+    const days = Number(scheduleForm.daysBetweenRounds);
+
+    if (!scheduleForm.tournamentId) {
+      nextErrors.tournamentId = "Выберите турнир";
+    }
+
+    if (!scheduleForm.startDate) {
+      nextErrors.startDate = "Укажите дату первого тура";
+    }
+
+    if (!Number.isInteger(days) || days < 1 || days > 30) {
+      nextErrors.daysBetweenRounds = "Интервал должен быть от 1 до 30 дней";
+    }
+
+    return nextErrors;
+  }
+
+  async function handleGenerateSchedule(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const validationErrors = validateSchedule();
+    setScheduleErrors(validationErrors);
+    setSuccess("");
+
+    if (Object.keys(validationErrors).length > 0) {
+      return;
+    }
+
+    await generateSchedule({
+      tournamentId: scheduleForm.tournamentId,
+      startDate: scheduleForm.startDate,
+      daysBetweenRounds: Number(scheduleForm.daysBetweenRounds),
+    });
+
+    const refreshed = await listTournaments();
+    setItems(refreshed);
+    setSuccess("Расписание успешно сгенерировано");
   }
 
   return (
@@ -281,6 +344,74 @@ export function TournamentsClient() {
           <div className="field field-wide">
             <button className="button button-primary" type="submit">
               Сохранить турнир
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section className="card">
+        <div className="section-head">
+          <h2 className="section-title">Сгенерировать расписание</h2>
+          <p className="section-subtitle">
+            Автоматическая круговая генерация матчей по выбранному турниру.
+          </p>
+        </div>
+        <form className="form-grid" onSubmit={handleGenerateSchedule}>
+          <div className="field">
+            <label htmlFor="schedule-tournament">Турнир</label>
+            <select
+              id="schedule-tournament"
+              onChange={(event) =>
+                setScheduleForm((current) => ({ ...current, tournamentId: event.target.value }))
+              }
+              value={scheduleForm.tournamentId}
+            >
+              {items.map((tournament) => (
+                <option key={tournament.id} value={tournament.id}>
+                  {tournament.name}
+                </option>
+              ))}
+            </select>
+            {scheduleErrors.tournamentId ? (
+              <span className="field-error">{scheduleErrors.tournamentId}</span>
+            ) : null}
+          </div>
+          <div className="field">
+            <label htmlFor="schedule-start-date">Дата первого тура</label>
+            <input
+              id="schedule-start-date"
+              onChange={(event) =>
+                setScheduleForm((current) => ({ ...current, startDate: event.target.value }))
+              }
+              type="date"
+              value={scheduleForm.startDate}
+            />
+            {scheduleErrors.startDate ? (
+              <span className="field-error">{scheduleErrors.startDate}</span>
+            ) : null}
+          </div>
+          <div className="field">
+            <label htmlFor="schedule-days">Дней между турами</label>
+            <input
+              id="schedule-days"
+              max="30"
+              min="1"
+              onChange={(event) =>
+                setScheduleForm((current) => ({
+                  ...current,
+                  daysBetweenRounds: event.target.value,
+                }))
+              }
+              type="number"
+              value={scheduleForm.daysBetweenRounds}
+            />
+            {scheduleErrors.daysBetweenRounds ? (
+              <span className="field-error">{scheduleErrors.daysBetweenRounds}</span>
+            ) : null}
+          </div>
+          <div className="field field-wide">
+            <button className="button button-primary" type="submit">
+              Сгенерировать расписание
             </button>
           </div>
         </form>
