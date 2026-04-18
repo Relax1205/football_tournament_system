@@ -1,6 +1,7 @@
 import cors from 'cors';
-import dotenv from 'dotenv';
 import express from 'express';
+import { prisma } from './common/prisma';
+import { config } from './config';
 import applicationRoutes = require('./modules/applications/application.routes');
 import authRoutes = require('./modules/auth/auth.routes');
 import matchEventRoutes = require('./modules/match-events/match-event.routes');
@@ -12,8 +13,6 @@ import standingsRoutes = require('./modules/standings/standings.routes');
 import teamRoutes = require('./modules/teams/team.routes');
 import tournamentRoutes = require('./modules/tournaments/tournament.routes');
 import userRoutes = require('./modules/users/user.routes');
-
-dotenv.config();
 
 const app = express();
 const port = Number(process.env.PORT || 4000);
@@ -44,6 +43,25 @@ app.use('*', (_request, response) => {
   response.status(404).json({ success: false, error: 'Endpoint not found' });
 });
 
-app.listen(port, () => {
-  console.log(`Backend running on http://localhost:${port}`);
-});
+async function bootstrap() {
+  try {
+    await prisma.$connect();
+    console.log(`PostgreSQL connected: ${config.databaseTarget}`);
+
+    app.listen(port, () => {
+      console.log(`Backend running on http://localhost:${port}`);
+    });
+  } catch (error) {
+    console.error('Failed to connect to PostgreSQL.');
+    console.error(`Configured target: ${config.databaseTarget}`);
+    console.error('Use backend/.env DATABASE_URL or set DB_HOST/DB_PORT/DB_NAME/DB_USER/DB_PASSWORD for local PostgreSQL.');
+
+    if (error instanceof Error) {
+      console.error(error.message);
+    }
+
+    process.exit(1);
+  }
+}
+
+void bootstrap();

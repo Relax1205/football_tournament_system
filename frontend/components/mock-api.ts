@@ -669,12 +669,20 @@ export function getStandingsExportUrl(tournamentId: string) {
   return `/api/reports/standings/${tournamentId}/excel`;
 }
 
+async function withFallback<T>(loader: () => Promise<T>, fallback: T): Promise<T> {
+  try {
+    return await loader();
+  } catch {
+    return fallback;
+  }
+}
+
 export async function getDashboardSnapshot() {
   const [applications, matches, tournaments, users] = await Promise.all([
-    listApplications(),
-    listMatches(),
-    listTournaments(),
-    listUsers(),
+    withFallback(() => listApplications(), [] as ApplicationRecord[]),
+    withFallback(() => listMatches(), [] as MatchRecord[]),
+    withFallback(() => listTournaments(), [] as Tournament[]),
+    withFallback(() => listUsers(), [] as DemoUser[]),
   ]);
 
   return {

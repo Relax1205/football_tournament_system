@@ -15,8 +15,8 @@ export function LayoutShell({ children }: LayoutShellProps) {
       <HeaderBar />
       {children}
       <div className="footer-note">
-        Интерфейс подключён к реальному backend с ролями, заявками, расписанием,
-        таблицей и экспортом отчётов.
+        Платформа помогает организаторам, судьям и командам работать в одном процессе без лишней
+        рутины и потери контекста.
       </div>
     </div>
   );

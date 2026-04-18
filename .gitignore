@@ -1,6 +1,8 @@
 # Dependencies
 node_modules/
+.local-postgres/
 
+.npm-cache/
 # Next.js
 .next/
 out/

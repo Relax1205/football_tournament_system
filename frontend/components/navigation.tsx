@@ -18,7 +18,6 @@ const links: NavLink[] = [
   { href: "/matches", label: "Матчи", roles: ["admin", "organizer", "referee"] },
   { href: "/standings", label: "Таблица", roles: ["admin", "organizer", "referee", "coach", "fan"] },
   { href: "/teams", label: "Команды", roles: ["admin", "organizer", "coach", "fan"] },
-  { href: "/login", label: "Вход" },
 ];
 
 export function Navigation() {
@@ -26,14 +25,6 @@ export function Navigation() {
   const { user } = useAuth();
 
   const visibleLinks = links.filter((link) => {
-    if (link.href === "/login") {
-      if (pathname === "/") {
-        return false;
-      }
-
-      return !user;
-    }
-
     if (!link.roles) {
       return true;
     }

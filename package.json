@@ -1,0 +1,11 @@
+{
+  "name": "football-tournament-system",
+  "private": true,
+  "scripts": {
+    "dev": "docker compose up --build",
+    "start": "docker compose up --build",
+    "stop": "docker compose down",
+    "reset": "docker compose down -v --remove-orphans",
+    "logs": "docker compose logs -f"
+  }
+}

@@ -7,15 +7,37 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_USER: postgres
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d football_tournament_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend-init:
+    build:
+      context: ./backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/football_tournament_db?schema=public
+      JWT_EXPIRES_IN: 7d
+      JWT_SECRET: dev-secret-key
+      PORT: 4000
+    command: sh -c "npx prisma db push && npx prisma db seed"
+    restart: "no"
 
   backend:
     build:
       context: ./backend
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+      backend-init:
+        condition: service_completed_successfully
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/football_tournament_db?schema=public
       JWT_EXPIRES_IN: 7d
@@ -23,7 +45,13 @@ services:
       PORT: 4000
     ports:
       - "4000:4000"
-    command: sh -c "npx prisma db push && node dist/index.js"
+    command: node dist/index.js
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4000/health >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   frontend:
     build:
@@ -31,9 +59,11 @@ services:
       args:
         API_PROXY_TARGET: http://backend:4000
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     ports:
       - "3000:3000"
+    restart: unless-stopped
 
 volumes:
   postgres_data:
