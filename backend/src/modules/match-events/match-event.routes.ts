@@ -1,6 +1,7 @@
 import { Role } from '@prisma/client';
 import { Router } from 'express';
 import { z } from 'zod';
+import { getErrorStatusCode } from '../../common/http-error';
 import { authenticate, requireRoles } from '../../middleware/auth';
 import { MatchEventService, createEventSchema } from './match-event.service';
 
@@ -18,7 +19,7 @@ router.get('/match/:id', async (request, response) => {
 router.post('/', authenticate, requireRoles(Role.ADMIN, Role.ORGANIZER, Role.REFEREE), async (request, response) => {
   try {
     const payload = createEventSchema.parse(request.body);
-    const event = await MatchEventService.create(payload);
+    const event = await MatchEventService.create(payload, request.auth);
 
     response.status(201).json({ success: true, data: event });
   } catch (error) {
@@ -27,7 +28,7 @@ router.post('/', authenticate, requireRoles(Role.ADMIN, Role.ORGANIZER, Role.REF
     }
 
     if (error instanceof Error) {
-      return response.status(400).json({ success: false, error: error.message });
+      return response.status(getErrorStatusCode(error, 400)).json({ success: false, error: error.message });
     }
 
     response.status(500).json({ success: false, error: 'Unable to create event' });
@@ -36,9 +37,13 @@ router.post('/', authenticate, requireRoles(Role.ADMIN, Role.ORGANIZER, Role.REF
 
 router.delete('/:id', authenticate, requireRoles(Role.ADMIN, Role.ORGANIZER, Role.REFEREE), async (request, response) => {
   try {
-    await MatchEventService.delete(request.params.id);
+    await MatchEventService.delete(request.params.id, request.auth);
     response.json({ success: true, data: { id: request.params.id } });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error) {
+      return response.status(getErrorStatusCode(error, 400)).json({ success: false, error: error.message });
+    }
+
     response.status(500).json({ success: false, error: 'Unable to delete event' });
   }
 });

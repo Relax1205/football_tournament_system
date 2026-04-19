@@ -9,6 +9,7 @@ export interface RegisterInput {
   email: string;
   password: string;
   name?: string;
+  privacyAccepted: boolean;
 }
 
 export interface LoginInput {

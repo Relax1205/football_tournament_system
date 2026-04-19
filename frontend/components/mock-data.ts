@@ -119,6 +119,7 @@ export type TeamRecord = {
   name: string;
   city?: string;
   tournamentId: string;
+  coachId?: string;
   coachName?: string;
   playersCount: number;
   players?: Array<{

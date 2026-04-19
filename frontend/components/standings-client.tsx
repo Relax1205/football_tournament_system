@@ -125,7 +125,6 @@ export function StandingsClient() {
               <th>Н</th>
               <th>П</th>
               <th>Голы</th>
-              <th>Разница</th>
               <th>Очки</th>
             </tr>
           </thead>
@@ -139,7 +138,6 @@ export function StandingsClient() {
                 <td>{team.draw}</td>
                 <td>{team.lost}</td>
                 <td>{team.goals}</td>
-                <td>{team.diff}</td>
                 <td>{team.points}</td>
               </tr>
             ))}

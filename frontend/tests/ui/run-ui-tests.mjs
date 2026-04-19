@@ -44,7 +44,7 @@ async function apiRequest(pathname, { body, method = "GET", token } = {}) {
   return payload.data;
 }
 
-async function apiLogin(role) {
+async function apiLoginSession(role) {
   const user = DEMO_USERS[role];
   const result = await apiRequest("/auth/login", {
     method: "POST",
@@ -54,7 +54,16 @@ async function apiLogin(role) {
     },
   });
 
-  return result.token;
+  return {
+    token: result.token,
+    userId: result.user.id,
+    role: result.user.role,
+  };
+}
+
+async function apiLogin(role) {
+  const session = await apiLoginSession(role);
+  return session.token;
 }
 
 function buildUserFixture(prefix = "ui-user") {
@@ -74,6 +83,7 @@ async function registerUserFixture(prefix = "ui-user") {
       email: fixture.email,
       password: fixture.password,
       name: fixture.name,
+      privacyAccepted: true,
     },
   });
 
@@ -89,6 +99,7 @@ async function createMatchFixture() {
   const organizerToken = await apiLogin("organizer");
   const coachToken = await apiLogin("coach");
   const coach2Token = await apiLogin("coach2");
+  const refereeSession = await apiLoginSession("referee");
   const uniqueSuffix = Date.now().toString().slice(-6);
   const homeTeamName = `UI Home ${uniqueSuffix}`;
   const awayTeamName = `UI Away ${uniqueSuffix}`;
@@ -169,13 +180,16 @@ async function createMatchFixture() {
     },
   });
 
-  await apiRequest("/schedule/generate", {
+  await apiRequest("/matches", {
     method: "POST",
     token: organizerToken,
     body: {
       tournamentId: tournament.id,
-      startDate: "2026-06-02T12:00:00.000Z",
-      daysBetweenRounds: 3,
+      homeTeamId: homeTeam.id,
+      awayTeamId: awayTeam.id,
+      refereeId: refereeSession.userId,
+      date: "2026-06-02T12:00:00.000Z",
+      venue: "UI Arena",
     },
   });
 
@@ -435,6 +449,7 @@ async function registerViewerAndVerifyNotifications(driver) {
     await driver.findElement(By.id("register-confirm-password")),
     passwordValue,
   );
+  await clickSafely(driver, await driver.findElement(By.id("register-consent")));
   await clickSafely(driver, await driver.findElement(By.id("register-submit")));
 
   await driver.wait(until.urlContains("/login"), 10000);

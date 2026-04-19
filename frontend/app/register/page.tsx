@@ -7,6 +7,7 @@ import { LayoutShell } from "@/components/layout-shell";
 import { registerUser } from "@/components/mock-api";
 
 type RegisterForm = {
+  acceptedPrivacy: boolean;
   confirmPassword: string;
   email: string;
   name: string;
@@ -14,6 +15,7 @@ type RegisterForm = {
 };
 
 const initialForm: RegisterForm = {
+  acceptedPrivacy: false,
   confirmPassword: "",
   email: "",
   name: "",
@@ -46,6 +48,11 @@ export default function RegisterPage() {
       nextErrors.confirmPassword = "Пароли не совпадают";
     }
 
+    if (!form.acceptedPrivacy) {
+      nextErrors.acceptedPrivacy =
+        "Для регистрации нужно принять политику конфиденциальности";
+    }
+
     return nextErrors;
   }
 
@@ -66,6 +73,7 @@ export default function RegisterPage() {
         form.name.trim(),
         form.email.trim().toLowerCase(),
         form.password,
+        form.acceptedPrivacy,
       );
 
       router.push(
@@ -149,6 +157,32 @@ export default function RegisterPage() {
                 />
                 <span className={`field-error${errors.confirmPassword ? "" : " is-empty"}`}>
                   {errors.confirmPassword || "\u00a0"}
+                </span>
+              </div>
+              <div className="field field-wide checkbox-field">
+                <div className="checkbox-row">
+                  <input
+                    checked={form.acceptedPrivacy}
+                    className="checkbox-control"
+                    id="register-consent"
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        acceptedPrivacy: event.target.checked,
+                      }))
+                    }
+                    type="checkbox"
+                  />
+                  <label className="checkbox-copy" htmlFor="register-consent">
+                    Я принимаю{" "}
+                    <Link className="inline-link" href="/privacy">
+                      политику конфиденциальности
+                    </Link>{" "}
+                    и согласен на обработку данных в рамках работы системы.
+                  </label>
+                </div>
+                <span className={`field-error${errors.acceptedPrivacy ? "" : " is-empty"}`}>
+                  {errors.acceptedPrivacy || "\u00a0"}
                 </span>
               </div>
               <div className="field field-wide form-feedback-slot">

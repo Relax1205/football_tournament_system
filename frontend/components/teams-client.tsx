@@ -1,18 +1,25 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "@/components/auth-provider";
 import { listPlayers } from "@/components/mock-api";
 import { PlayerRecord } from "@/components/mock-data";
 
 export function TeamsClient() {
+  const { isReady, user } = useAuth();
   const [players, setPlayers] = useState<PlayerRecord[]>([]);
   const [query, setQuery] = useState("");
   const [teamFilter, setTeamFilter] = useState("all");
   const [sortKey, setSortKey] = useState<"goals" | "name" | "red" | "team" | "yellow">("goals");
 
   useEffect(() => {
-    void listPlayers().then(setPlayers);
-  }, []);
+    if (!isReady) {
+      return;
+    }
+
+    const playerQuery = user?.role === "coach" ? { coachId: user.id } : undefined;
+    void listPlayers(playerQuery).then(setPlayers);
+  }, [isReady, user]);
 
   const teamsFromPlayers = useMemo(
     () => Array.from(new Set(players.map((player) => player.team))),
@@ -46,6 +53,11 @@ export function TeamsClient() {
     <section className="card">
       <div className="page-head">
         <h1 className="page-title">Команды и игроки</h1>
+        {user?.role === "coach" ? (
+          <p className="login-helper-copy">
+            Для тренера отображается только статистика игроков своей команды.
+          </p>
+        ) : null}
       </div>
       <div className="toolbar">
         <input

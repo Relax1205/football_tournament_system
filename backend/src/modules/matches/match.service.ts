@@ -1,5 +1,6 @@
 import { MatchStatus, Role } from '@prisma/client';
 import { z } from 'zod';
+import { HttpError } from '../../common/http-error';
 import { prisma } from '../../common/prisma';
 import { NotificationService } from '../notifications/notification.service';
 import { StandingsService } from '../standings/standings.service';
@@ -18,10 +19,48 @@ export const updateScoreSchema = z.object({
   awayScore: z.number().int().min(0),
 });
 
+type MatchActor = {
+  role: Role;
+  userId: string;
+};
+
 export class MatchService {
-  static async getAll(tournamentId?: string) {
+  private static ensureMatchEditable(match: { status: MatchStatus }) {
+    if (match.status === MatchStatus.CONFIRMED) {
+      throw new HttpError(409, 'Confirmed matches cannot be edited');
+    }
+
+    if (match.status === MatchStatus.CANCELLED) {
+      throw new HttpError(409, 'Cancelled matches cannot be edited');
+    }
+  }
+
+  private static ensureActorCanEdit(
+    match: { refereeId: string | null },
+    actor?: MatchActor,
+  ) {
+    if (!actor || actor.role !== Role.REFEREE) {
+      return;
+    }
+
+    if (match.refereeId !== actor.userId) {
+      throw new HttpError(403, 'Referees can only edit matches assigned to them');
+    }
+  }
+
+  static async getAll(tournamentId?: string, coachId?: string) {
     return prisma.match.findMany({
-      where: tournamentId ? { tournamentId } : undefined,
+      where: {
+        ...(tournamentId ? { tournamentId } : {}),
+        ...(coachId
+          ? {
+              OR: [
+                { homeTeam: { coachId } },
+                { awayTeam: { coachId } },
+              ],
+            }
+          : {}),
+      },
       include: {
         tournament: {
           select: { id: true, name: true },
@@ -89,21 +128,25 @@ export class MatchService {
   static async updateScore(
     matchId: string,
     input: z.infer<typeof updateScoreSchema>,
-    actorUserId?: string,
+    actor?: MatchActor,
   ) {
     const payload = updateScoreSchema.parse(input);
 
     const match = await prisma.match.findUnique({
       where: { id: matchId },
+      select: {
+        id: true,
+        status: true,
+        refereeId: true,
+      },
     });
 
     if (!match) {
-      throw new Error('Match not found');
+      throw new HttpError(404, 'Match not found');
     }
 
-    if (match.status === MatchStatus.CONFIRMED) {
-      throw new Error('Confirmed matches cannot be edited');
-    }
+    this.ensureMatchEditable(match);
+    this.ensureActorCanEdit(match, actor);
 
     const updatedMatch = await prisma.match.update({
       where: { id: matchId },
@@ -144,7 +187,7 @@ export class MatchService {
         role: {
           in: [Role.ADMIN, Role.ORGANIZER],
         },
-        ...(actorUserId ? { id: { not: actorUserId } } : {}),
+        ...(actor?.userId ? { id: { not: actor.userId } } : {}),
       },
       select: {
         id: true,

@@ -60,6 +60,14 @@ const emptyTeamForm: TeamForm = {
   tournamentId: "",
 };
 
+function isUsersTeam(team: TeamRecord, user: DemoUser | null) {
+  if (!user || user.role !== "coach") {
+    return false;
+  }
+
+  return team.coachId === user.id || team.coachName === user.name;
+}
+
 function parseCsvPlayers(csvText: string) {
   const rows = csvText
     .split(/\r?\n/)
@@ -158,7 +166,7 @@ export function TeamManagementPanels() {
 
       const preferredTeam =
         user?.role === "coach"
-          ? loadedTeams.find((team) => team.coachName === user.name)
+          ? loadedTeams.find((team) => isUsersTeam(team, user))
           : loadedTeams[0];
 
       setPlayerForm((current) => ({
@@ -187,7 +195,7 @@ export function TeamManagementPanels() {
 
   const editableTeams = useMemo(() => {
     if (user?.role === "coach") {
-      return teams.filter((team) => team.coachName === user.name);
+      return teams.filter((team) => isUsersTeam(team, user));
     }
 
     return teams;

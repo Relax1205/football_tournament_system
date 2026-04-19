@@ -2,11 +2,18 @@ import { EventType } from '@prisma/client';
 import { prisma } from '../../common/prisma';
 
 export class PlayerService {
-  static async getAll(tournamentId?: string, teamId?: string) {
+  static async getAll(tournamentId?: string, teamId?: string, coachId?: string) {
     const players = await prisma.player.findMany({
       where: {
         ...(teamId ? { teamId } : {}),
-        ...(tournamentId ? { team: { tournamentId } } : {}),
+        ...(tournamentId || coachId
+          ? {
+              team: {
+                ...(tournamentId ? { tournamentId } : {}),
+                ...(coachId ? { coachId } : {}),
+              },
+            }
+          : {}),
       },
       include: {
         team: {

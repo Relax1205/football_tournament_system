@@ -11,8 +11,11 @@ router.get('/', async (request, response) => {
     const teamId = typeof request.query.teamId === 'string'
       ? request.query.teamId
       : undefined;
+    const coachId = typeof request.query.coachId === 'string'
+      ? request.query.coachId
+      : undefined;
 
-    const players = await PlayerService.getAll(tournamentId, teamId);
+    const players = await PlayerService.getAll(tournamentId, teamId, coachId);
     response.json({ success: true, data: players });
   } catch {
     response.status(500).json({ success: false, error: 'Unable to load players' });

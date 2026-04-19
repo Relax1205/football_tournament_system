@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { ReactNode } from "react";
 import { HeaderBar } from "@/components/header-bar";
 
@@ -14,10 +15,17 @@ export function LayoutShell({ children }: LayoutShellProps) {
       <div className="ambient-orb ambient-orb-right" />
       <HeaderBar />
       {children}
-      <div className="footer-note">
-        Платформа помогает организаторам, судьям и командам работать в одном процессе без лишней
-        рутины и потери контекста.
-      </div>
+      <footer className="footer-note">
+        <span>
+          Платформа помогает организаторам, судьям и командам работать в одном процессе без
+          лишней рутины и потери контекста.
+        </span>
+        <div className="footer-note-links">
+          <Link className="footer-note-link" href="/privacy">
+            Политика конфиденциальности
+          </Link>
+        </div>
+      </footer>
     </div>
   );
 }

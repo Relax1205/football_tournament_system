@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
 import {
   confirmMatch,
@@ -33,8 +33,16 @@ const initialForm: MatchForm = {
   status: "Требует подтверждения",
 };
 
-function isEditableMatch(match: MatchRecord) {
-  return match.apiStatus !== "CONFIRMED" && match.apiStatus !== "CANCELLED";
+function isEditableMatch(match: MatchRecord, role?: string, userId?: string) {
+  if (match.apiStatus === "CONFIRMED" || match.apiStatus === "CANCELLED") {
+    return false;
+  }
+
+  if (role === "referee") {
+    return match.refereeId === userId;
+  }
+
+  return true;
 }
 
 function getFirstAvailablePlayer(match: MatchRecord | null, players: PlayerRecord[]) {
@@ -59,6 +67,10 @@ function formatSaveError(error: unknown) {
     return "Подтверждённый матч нельзя редактировать";
   }
 
+  if (error.message.includes("Referees can only edit matches assigned to them")) {
+    return "РЎСѓРґСЊСЏ РјРѕР¶РµС‚ РІРµСЃС‚Рё С‚РѕР»СЊРєРѕ РЅР°Р·РЅР°С‡РµРЅРЅС‹Р№ РµРјСѓ РјР°С‚С‡";
+  }
+
   if (error.message.includes("Request failed")) {
     return "Не удалось сохранить результат матча";
   }
@@ -67,7 +79,7 @@ function formatSaveError(error: unknown) {
 }
 
 export function MatchesClient() {
-  const { user } = useAuth();
+  const { isReady, user } = useAuth();
   const canEdit = user?.role === "admin" || user?.role === "organizer" || user?.role === "referee";
   const canConfirm = user?.role === "admin" || user?.role === "organizer";
   const [items, setItems] = useState<MatchRecord[]>([]);
@@ -81,8 +93,8 @@ export function MatchesClient() {
   const [form, setForm] = useState<MatchForm>(initialForm);
 
   const editableMatches = useMemo(
-    () => items.filter((match) => isEditableMatch(match)),
-    [items],
+    () => items.filter((match) => isEditableMatch(match, user?.role, user?.id)),
+    [items, user?.id, user?.role],
   );
 
   const currentMatch = useMemo(
@@ -102,24 +114,34 @@ export function MatchesClient() {
   }, [currentMatch, players]);
 
   useEffect(() => {
-    void Promise.all([listMatches(), listPlayers()]).then(([loadedMatches, loadedPlayers]) => {
-      setItems(loadedMatches);
-      setPlayers(loadedPlayers);
+    if (!isReady) {
+      return;
+    }
 
-      const firstEditableMatch = loadedMatches.find((match) => isEditableMatch(match)) ?? null;
-      const firstPlayer = getFirstAvailablePlayer(firstEditableMatch, loadedPlayers);
+    const matchQuery = user?.role === "coach" ? { coachId: user.id } : undefined;
+    const playerQuery = user?.role === "coach" ? { coachId: user.id } : undefined;
 
-      if (firstEditableMatch) {
-        setForm((current) => ({
-          ...current,
-          matchId: firstEditableMatch.id,
-          homeScore: String(firstEditableMatch.homeScore),
-          awayScore: String(firstEditableMatch.awayScore),
-          playerId: firstPlayer,
-        }));
-      }
-    });
-  }, []);
+    void Promise.all([listMatches(matchQuery), listPlayers(playerQuery)]).then(
+      ([loadedMatches, loadedPlayers]) => {
+        setItems(loadedMatches);
+        setPlayers(loadedPlayers);
+
+        const firstEditableMatch =
+          loadedMatches.find((match) => isEditableMatch(match, user?.role, user?.id)) ?? null;
+        const firstPlayer = getFirstAvailablePlayer(firstEditableMatch, loadedPlayers);
+
+        if (firstEditableMatch) {
+          setForm((current) => ({
+            ...current,
+            matchId: firstEditableMatch.id,
+            homeScore: String(firstEditableMatch.homeScore),
+            awayScore: String(firstEditableMatch.awayScore),
+            playerId: firstPlayer,
+          }));
+        }
+      },
+    );
+  }, [isReady, user]);
 
   useEffect(() => {
     if (!canEdit) {
@@ -213,7 +235,7 @@ export function MatchesClient() {
     return nextErrors;
   }
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const validationErrors = validate();
     setErrors(validationErrors);
@@ -260,6 +282,11 @@ export function MatchesClient() {
       <section className="card">
         <div className="page-head">
           <h1 className="page-title">Матчи и расписание</h1>
+          {user?.role === "coach" ? (
+            <p className="login-helper-copy">
+              Для тренера показано только расписание команды, закреплённой за вашим аккаунтом.
+            </p>
+          ) : null}
         </div>
         <div className="toolbar">
           <input

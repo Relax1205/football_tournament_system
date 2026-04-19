@@ -5,6 +5,9 @@ const DEMO_PASSWORD = 'Test123!';
 
 type AuthSession = {
   token: string;
+  userId: string;
+  email: string;
+  role: string;
 };
 
 type TournamentResponse = {
@@ -29,6 +32,10 @@ type TeamResponse = {
 type MatchResponse = {
   id: string;
   status: string;
+};
+
+type MatchEventResponse = {
+  id: string;
 };
 
 type PlayerResponse = {
@@ -69,12 +76,17 @@ async function request<T>(path: string, config?: AxiosRequestConfig) {
 }
 
 async function login(email: string, password = DEMO_PASSWORD): Promise<AuthSession> {
-  const result = await request<{ token: string }>('/auth/login', {
+  const result = await request<{ token: string; user: { id: string; email: string; role: string } }>('/auth/login', {
     method: 'POST',
     data: { email, password },
   });
 
-  return { token: result.token };
+  return {
+    token: result.token,
+    userId: result.user.id,
+    email: result.user.email,
+    role: result.user.role,
+  };
 }
 
 function authConfig(session: AuthSession): AxiosRequestConfig {
@@ -105,6 +117,7 @@ async function main() {
       email: registeredEmail,
       password: DEMO_PASSWORD,
       name: registeredName,
+      privacyAccepted: true,
     },
   });
 
@@ -251,12 +264,26 @@ async function main() {
     ...authConfig(organizer),
     params: { tournamentId: tournament.id },
   });
+  const allTeams = await request<TeamResponse[]>('/teams', {
+    method: 'GET',
+    ...authConfig(organizer),
+  });
 
   const coachTeam = teams.find((team) => team.id === approvedApplication1.approvedTeamId);
   const coach2Team = teams.find((team) => team.id === approvedApplication2.approvedTeamId);
 
   if (!coachTeam || !coach2Team) {
     throw new Error('Approved teams are missing from /teams');
+  }
+
+  const coachOwnedTeamIds = new Set(
+    allTeams
+      .filter((team) => team.coach?.email === coach.email)
+      .map((team) => team.id),
+  );
+
+  if (!coachOwnedTeamIds.has(coachTeam.id)) {
+    throw new Error('The newly approved team was not linked to the expected coach');
   }
 
   const coachPlayer = await request<PlayerResponse>(`/teams/${coachTeam.id}/players`, {
@@ -279,7 +306,20 @@ async function main() {
     },
   });
 
-  log('Generating a round-robin schedule twice and keeping previous matches');
+  log('Checking coach-scoped player queries');
+  const coachPlayers = await request<Array<{ id: string; team: { id: string } }>>('/players', {
+    method: 'GET',
+    params: { coachId: coach.userId },
+  });
+
+  if (
+    !coachPlayers.some((player) => player.id === coachPlayer.id) ||
+    coachPlayers.some((player) => !coachOwnedTeamIds.has(player.team.id))
+  ) {
+    throw new Error('Coach-scoped player query returned players outside of the coach team');
+  }
+
+  log('Generating a round-robin schedule and checking duplicate conflicts');
   const firstSchedule = await request<MatchResponse[]>('/schedule/generate', {
     method: 'POST',
     ...authConfig(organizer),
@@ -294,31 +334,93 @@ async function main() {
     throw new Error('Schedule generation returned no matches');
   }
 
-  const firstMatchIds = new Set(firstSchedule.map((match) => match.id));
-  const secondSchedule = await request<MatchResponse[]>('/schedule/generate', {
-    method: 'POST',
-    ...authConfig(organizer),
-    data: {
+  const repeatedScheduleResponse = await axios.post(
+    `${API_URL}/schedule/generate`,
+    {
       tournamentId: tournament.id,
       startDate: '2026-08-15T12:00:00.000Z',
       daysBetweenRounds: 2,
     },
+    {
+      validateStatus: () => true,
+      ...authConfig(organizer),
+    },
+  );
+
+  if (repeatedScheduleResponse.status !== 409) {
+    throw new Error(`Expected 409 for repeated schedule generation, got ${repeatedScheduleResponse.status}`);
+  }
+
+  const scheduledMatch = firstSchedule[0];
+  const assignedMatch = await request<MatchResponse>('/matches', {
+    method: 'POST',
+    ...authConfig(organizer),
+    data: {
+      tournamentId: tournament.id,
+      homeTeamId: coachTeam.id,
+      awayTeamId: coach2Team.id,
+      refereeId: referee.userId,
+      date: '2026-08-10T12:00:00.000Z',
+      venue: 'Central Arena',
+    },
   });
 
-  if (secondSchedule.length <= firstSchedule.length) {
-    throw new Error('Repeated schedule generation did not add new matches');
+  log('Checking coach-scoped match queries');
+  const coachMatches = await request<Array<{ id: string; homeTeam: { id: string }; awayTeam: { id: string } }>>('/matches', {
+    method: 'GET',
+    params: { coachId: coach.userId },
+  });
+
+  if (
+    !coachMatches.some(
+      (currentMatch) =>
+        currentMatch.homeTeam.id === coachTeam.id || currentMatch.awayTeam.id === coachTeam.id,
+    ) ||
+    coachMatches.some(
+      (currentMatch) =>
+        !coachOwnedTeamIds.has(currentMatch.homeTeam.id) &&
+        !coachOwnedTeamIds.has(currentMatch.awayTeam.id),
+    )
+  ) {
+    throw new Error('Coach-scoped match query returned matches outside of the coach team');
   }
 
-  for (const matchId of firstMatchIds) {
-    if (!secondSchedule.some((match) => match.id === matchId)) {
-      throw new Error('Repeated schedule generation removed previously created matches');
-    }
+  log('Checking referee access restrictions');
+  const unassignedMatchResponse = await axios.put(
+    `${API_URL}/matches/${scheduledMatch.id}/score`,
+    { homeScore: 1, awayScore: 0 },
+    {
+      validateStatus: () => true,
+      ...authConfig(referee),
+    },
+  );
+
+  if (unassignedMatchResponse.status !== 403) {
+    throw new Error(`Expected 403 for unassigned referee match update, got ${unassignedMatchResponse.status}`);
   }
 
-  const match = firstSchedule[0];
+  await request(`/users/${registeredUser.id}/role`, {
+    method: 'PATCH',
+    ...authConfig(admin),
+    data: { role: 'REFEREE' },
+  });
 
-  log('Saving match result as referee and adding a goal event');
-  await request<MatchResponse>(`/matches/${match.id}/score`, {
+  const foreignReferee = await login(registeredEmail);
+  const foreignRefereeResponse = await axios.put(
+    `${API_URL}/matches/${assignedMatch.id}/score`,
+    { homeScore: 1, awayScore: 0 },
+    {
+      validateStatus: () => true,
+      ...authConfig(foreignReferee),
+    },
+  );
+
+  if (foreignRefereeResponse.status !== 403) {
+    throw new Error(`Expected 403 for foreign referee match update, got ${foreignRefereeResponse.status}`);
+  }
+
+  log('Saving match result as the assigned referee and locking it after confirmation');
+  await request<MatchResponse>(`/matches/${assignedMatch.id}/score`, {
     method: 'PUT',
     ...authConfig(referee),
     data: {
@@ -327,11 +429,11 @@ async function main() {
     },
   });
 
-  await request('/match-events', {
+  const createdEvent = await request<MatchEventResponse>('/match-events', {
     method: 'POST',
     ...authConfig(referee),
     data: {
-      matchId: match.id,
+      matchId: assignedMatch.id,
       playerId: coachPlayer.id,
       minute: 57,
       type: 'GOAL',
@@ -340,13 +442,43 @@ async function main() {
   });
 
   log('Confirming the match result as organizer');
-  const confirmedMatch = await request<MatchResponse>(`/matches/${match.id}/confirm`, {
+  const confirmedMatch = await request<MatchResponse>(`/matches/${assignedMatch.id}/confirm`, {
     method: 'PATCH',
     ...authConfig(organizer),
   });
 
   if (confirmedMatch.status !== 'CONFIRMED') {
     throw new Error(`Expected confirmed match status, got ${confirmedMatch.status}`);
+  }
+
+  const createConfirmedEventResponse = await axios.post(
+    `${API_URL}/match-events`,
+    {
+      matchId: assignedMatch.id,
+      playerId: coachPlayer.id,
+      minute: 60,
+      type: 'YELLOW_CARD',
+    },
+    {
+      validateStatus: () => true,
+      ...authConfig(referee),
+    },
+  );
+
+  if (createConfirmedEventResponse.status !== 409) {
+    throw new Error(`Expected 409 for confirmed match event creation, got ${createConfirmedEventResponse.status}`);
+  }
+
+  const deleteConfirmedEventResponse = await axios.delete(
+    `${API_URL}/match-events/${createdEvent.id}`,
+    {
+      validateStatus: () => true,
+      ...authConfig(referee),
+    },
+  );
+
+  if (deleteConfirmedEventResponse.status !== 409) {
+    throw new Error(`Expected 409 for confirmed match event deletion, got ${deleteConfirmedEventResponse.status}`);
   }
 
   log('Updating a role as admin and checking notification delivery');
@@ -408,7 +540,7 @@ async function main() {
     throw new Error('Standings were not recalculated correctly');
   }
 
-  const pdfResponse = await axios.get(`${API_URL}/reports/matches/${match.id}/pdf`, {
+  const pdfResponse = await axios.get(`${API_URL}/reports/matches/${assignedMatch.id}/pdf`, {
     responseType: 'arraybuffer',
     validateStatus: () => true,
   });

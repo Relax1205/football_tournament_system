@@ -1,5 +1,6 @@
-import { EventType } from '@prisma/client';
+import { EventType, MatchStatus, Role } from '@prisma/client';
 import { z } from 'zod';
+import { HttpError } from '../../common/http-error';
 import { prisma } from '../../common/prisma';
 
 export const createEventSchema = z.object({
@@ -10,26 +11,67 @@ export const createEventSchema = z.object({
   comment: z.string().trim().optional(),
 });
 
+type MatchEventActor = {
+  role: Role;
+  userId: string;
+};
+
 export class MatchEventService {
-  static async create(input: z.infer<typeof createEventSchema>) {
+  private static ensureMatchEditable(match: { status: MatchStatus }) {
+    if (match.status === MatchStatus.CONFIRMED) {
+      throw new HttpError(409, 'Confirmed matches cannot be edited');
+    }
+
+    if (match.status === MatchStatus.CANCELLED) {
+      throw new HttpError(409, 'Cancelled matches cannot be edited');
+    }
+  }
+
+  private static ensureActorCanEdit(
+    match: { refereeId: string | null },
+    actor?: MatchEventActor,
+  ) {
+    if (!actor || actor.role !== Role.REFEREE) {
+      return;
+    }
+
+    if (match.refereeId !== actor.userId) {
+      throw new HttpError(403, 'Referees can only edit matches assigned to them');
+    }
+  }
+
+  static async create(
+    input: z.infer<typeof createEventSchema>,
+    actor?: MatchEventActor,
+  ) {
     const payload = createEventSchema.parse(input);
 
     const match = await prisma.match.findUnique({
       where: { id: payload.matchId },
+      select: {
+        id: true,
+        status: true,
+        refereeId: true,
+        homeTeamId: true,
+        awayTeamId: true,
+      },
     });
     if (!match) {
-      throw new Error('Match not found');
+      throw new HttpError(404, 'Match not found');
     }
+
+    this.ensureMatchEditable(match);
+    this.ensureActorCanEdit(match, actor);
 
     const player = await prisma.player.findUnique({
       where: { id: payload.playerId },
     });
     if (!player) {
-      throw new Error('Player not found');
+      throw new HttpError(404, 'Player not found');
     }
 
     if (player.teamId !== match.homeTeamId && player.teamId !== match.awayTeamId) {
-      throw new Error('Player does not belong to this match');
+      throw new HttpError(400, 'Player does not belong to this match');
     }
 
     return prisma.matchEvent.create({
@@ -72,7 +114,27 @@ export class MatchEventService {
     });
   }
 
-  static async delete(eventId: string) {
+  static async delete(eventId: string, actor?: MatchEventActor) {
+    const event = await prisma.matchEvent.findUnique({
+      where: { id: eventId },
+      select: {
+        id: true,
+        match: {
+          select: {
+            status: true,
+            refereeId: true,
+          },
+        },
+      },
+    });
+
+    if (!event) {
+      throw new HttpError(404, 'Event not found');
+    }
+
+    this.ensureMatchEditable(event.match);
+    this.ensureActorCanEdit(event.match, actor);
+
     return prisma.matchEvent.delete({
       where: { id: eventId },
     });

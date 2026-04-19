@@ -229,12 +229,36 @@ export type GenerateScheduleInput = {
   daysBetweenRounds: number;
 };
 
+type MatchQuery = {
+  tournamentId?: string;
+  coachId?: string;
+};
+
+type PlayerQuery = {
+  tournamentId?: string;
+  teamId?: string;
+  coachId?: string;
+};
+
 function getToken() {
   if (typeof window === "undefined") {
     return null;
   }
 
   return window.localStorage.getItem(TOKEN_KEY);
+}
+
+function buildQuery(params: Record<string, string | undefined>) {
+  const searchParams = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value) {
+      searchParams.set(key, value);
+    }
+  });
+
+  const query = searchParams.toString();
+  return query ? `?${query}` : "";
 }
 
 function toIsoDate(date: string) {
@@ -470,7 +494,12 @@ export async function loginUser(email: string, password: string) {
   };
 }
 
-export async function registerUser(name: string, email: string, password: string) {
+export async function registerUser(
+  name: string,
+  email: string,
+  password: string,
+  privacyAccepted: boolean,
+) {
   const user = await requestJson<ApiUser>(
     "/api/auth/register",
     {
@@ -479,6 +508,7 @@ export async function registerUser(name: string, email: string, password: string
         name,
         email,
         password,
+        privacyAccepted,
       }),
     },
   );
@@ -530,6 +560,7 @@ export async function createTeam(input: CreateTeamInput) {
     name: created.name,
     city: created.city ?? undefined,
     tournamentId: created.tournamentId,
+    coachId: created.coach?.id ?? undefined,
     coachName: created.coach?.name ?? created.coach?.email,
     playersCount: created.players?.length ?? 0,
     players: created.players?.map((player) => ({
@@ -541,8 +572,10 @@ export async function createTeam(input: CreateTeamInput) {
   } as TeamRecord;
 }
 
-export async function listMatches(tournamentId?: string) {
-  const query = tournamentId ? `?tournamentId=${encodeURIComponent(tournamentId)}` : "";
+export async function listMatches(params?: string | MatchQuery) {
+  const normalizedParams =
+    typeof params === "string" ? { tournamentId: params } : (params ?? {});
+  const query = buildQuery(normalizedParams);
   const matches = await requestJson<ApiMatch[]>(`/api/matches${query}`);
   return matches.map(mapMatch);
 }
@@ -651,8 +684,10 @@ export async function calculateStandings(tournamentId: string) {
   return standings.map(mapStanding);
 }
 
-export async function listPlayers(tournamentId?: string) {
-  const query = tournamentId ? `?tournamentId=${encodeURIComponent(tournamentId)}` : "";
+export async function listPlayers(params?: string | PlayerQuery) {
+  const normalizedParams =
+    typeof params === "string" ? { tournamentId: params } : (params ?? {});
+  const query = buildQuery(normalizedParams);
   const players = await requestJson<ApiPlayer[]>(`/api/players${query}`);
   return players.map(mapPlayer);
 }
@@ -743,6 +778,7 @@ export async function listTeams(tournamentId?: string) {
     name: team.name,
     city: team.city ?? undefined,
     tournamentId: team.tournamentId,
+    coachId: team.coach?.id ?? undefined,
     coachName: team.coach?.name ?? team.coach?.email,
     playersCount: team.players?.length ?? 0,
     players: team.players?.map((player) => ({

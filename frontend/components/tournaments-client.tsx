@@ -44,6 +44,8 @@ export function TournamentsClient() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [scheduleErrors, setScheduleErrors] = useState<Record<string, string>>({});
+  const [scheduleSubmitError, setScheduleSubmitError] = useState("");
+  const [scheduleSuccess, setScheduleSuccess] = useState("");
   const [success, setSuccess] = useState("");
 
   useEffect(() => {
@@ -169,21 +171,31 @@ export function TournamentsClient() {
     event.preventDefault();
     const validationErrors = validateSchedule();
     setScheduleErrors(validationErrors);
+    setScheduleSubmitError("");
+    setScheduleSuccess("");
     setSuccess("");
 
     if (Object.keys(validationErrors).length > 0) {
       return;
     }
 
-    await generateSchedule({
-      tournamentId: scheduleForm.tournamentId,
-      startDate: scheduleForm.startDate,
-      daysBetweenRounds: Number(scheduleForm.daysBetweenRounds),
-    });
+    try {
+      await generateSchedule({
+        tournamentId: scheduleForm.tournamentId,
+        startDate: scheduleForm.startDate,
+        daysBetweenRounds: Number(scheduleForm.daysBetweenRounds),
+      });
 
-    const refreshed = await listTournaments();
-    setItems(refreshed);
+      const refreshed = await listTournaments();
+      setItems(refreshed);
+      setScheduleSuccess("Р Р°СЃРїРёСЃР°РЅРёРµ СѓСЃРїРµС€РЅРѕ СЃРіРµРЅРµСЂРёСЂРѕРІР°РЅРѕ");
     setSuccess("Расписание успешно сгенерировано");
+      setScheduleSuccess("Schedule generated successfully");
+    } catch (error) {
+      setScheduleSubmitError(
+        error instanceof Error ? error.message : "РќРµ СѓРґР°Р»РѕСЃСЊ СЃС„РѕСЂРјРёСЂРѕРІР°С‚СЊ СЂР°СЃРїРёСЃР°РЅРёРµ",
+      );
+    }
   }
 
   return (
@@ -447,6 +459,15 @@ export function TournamentsClient() {
                 >
                   {scheduleErrors.daysBetweenRounds || "\u00a0"}
                 </span>
+              </div>
+              <div className="field field-wide form-feedback-slot">
+                {scheduleSubmitError ? (
+                  <div className="message-error">{scheduleSubmitError}</div>
+                ) : scheduleSuccess ? (
+                  <div className="message-success">{scheduleSuccess}</div>
+                ) : (
+                  <div aria-hidden="true" className="message-placeholder" />
+                )}
               </div>
               <div className="field field-wide">
                 <button className="button button-primary" type="submit">

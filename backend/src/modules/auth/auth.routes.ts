@@ -8,6 +8,9 @@ const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
   name: z.string().trim().min(2).optional(),
+  privacyAccepted: z.boolean().refine((value) => value, {
+    message: 'Privacy policy consent is required',
+  }),
 });
 
 const loginSchema = z.object({

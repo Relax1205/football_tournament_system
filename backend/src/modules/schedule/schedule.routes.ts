@@ -1,6 +1,7 @@
 import { Role } from '@prisma/client';
 import { Router } from 'express';
 import { z } from 'zod';
+import { getErrorStatusCode } from '../../common/http-error';
 import { authenticate, requireRoles } from '../../middleware/auth';
 import { ScheduleService } from './schedule.service';
 
@@ -28,7 +29,7 @@ router.post('/generate', authenticate, requireRoles(Role.ADMIN, Role.ORGANIZER),
     }
 
     if (error instanceof Error) {
-      return response.status(400).json({ success: false, error: error.message });
+      return response.status(getErrorStatusCode(error, 400)).json({ success: false, error: error.message });
     }
 
     response.status(500).json({ success: false, error: 'Unable to generate schedule' });

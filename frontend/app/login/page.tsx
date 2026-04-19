@@ -98,7 +98,7 @@ export default function LoginPage() {
             <div className="auth-page-footer">
               <span className="table-muted">Нужен новый аккаунт?</span>
               <Link className="button button-secondary" href="/register">
-                Открыть регистрацию
+                Зарегистрироваться
               </Link>
             </div>
           </article>

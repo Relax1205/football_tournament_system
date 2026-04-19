@@ -1,6 +1,7 @@
 import { Role } from '@prisma/client';
 import { Router } from 'express';
 import { z } from 'zod';
+import { getErrorStatusCode } from '../../common/http-error';
 import { authenticate, requireRoles } from '../../middleware/auth';
 import { MatchService } from './match.service';
 
@@ -11,7 +12,10 @@ router.get('/', async (request, response) => {
     const tournamentId = typeof request.query.tournamentId === 'string'
       ? request.query.tournamentId
       : undefined;
-    const matches = await MatchService.getAll(tournamentId);
+    const coachId = typeof request.query.coachId === 'string'
+      ? request.query.coachId
+      : undefined;
+    const matches = await MatchService.getAll(tournamentId, coachId);
 
     response.json({ success: true, data: matches });
   } catch {
@@ -29,7 +33,7 @@ router.post('/', authenticate, requireRoles(Role.ADMIN, Role.ORGANIZER), async (
     }
 
     if (error instanceof Error) {
-      return response.status(400).json({ success: false, error: error.message });
+      return response.status(getErrorStatusCode(error, 400)).json({ success: false, error: error.message });
     }
 
     response.status(500).json({ success: false, error: 'Unable to create match' });
@@ -38,7 +42,7 @@ router.post('/', authenticate, requireRoles(Role.ADMIN, Role.ORGANIZER), async (
 
 router.put('/:id/score', authenticate, requireRoles(Role.ADMIN, Role.ORGANIZER, Role.REFEREE), async (request, response) => {
   try {
-    const match = await MatchService.updateScore(request.params.id, request.body, request.auth!.userId);
+    const match = await MatchService.updateScore(request.params.id, request.body, request.auth);
     response.json({ success: true, data: match });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -46,7 +50,7 @@ router.put('/:id/score', authenticate, requireRoles(Role.ADMIN, Role.ORGANIZER, 
     }
 
     if (error instanceof Error) {
-      return response.status(400).json({ success: false, error: error.message });
+      return response.status(getErrorStatusCode(error, 400)).json({ success: false, error: error.message });
     }
 
     response.status(500).json({ success: false, error: 'Unable to save match result' });
@@ -59,7 +63,7 @@ router.patch('/:id/confirm', authenticate, requireRoles(Role.ADMIN, Role.ORGANIZ
     response.json({ success: true, data: match });
   } catch (error) {
     if (error instanceof Error) {
-      return response.status(400).json({ success: false, error: error.message });
+      return response.status(getErrorStatusCode(error, 400)).json({ success: false, error: error.message });
     }
 
     response.status(500).json({ success: false, error: 'Unable to confirm match' });
@@ -72,7 +76,7 @@ router.delete('/:id', authenticate, requireRoles(Role.ADMIN, Role.ORGANIZER), as
     response.json({ success: true, data: { id: request.params.id } });
   } catch (error) {
     if (error instanceof Error) {
-      return response.status(400).json({ success: false, error: error.message });
+      return response.status(getErrorStatusCode(error, 400)).json({ success: false, error: error.message });
     }
 
     response.status(500).json({ success: false, error: 'Unable to delete match' });
