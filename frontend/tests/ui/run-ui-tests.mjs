@@ -520,7 +520,7 @@ async function verifyRbacForFan(driver) {
 
 async function submitApplicationAsCoach(driver) {
   await loginAs(driver, "coach");
-  await driver.get(`${BASE_URL}/teams`);
+  await driver.get(`${BASE_URL}/dashboard`);
 
   const teamName = await driver.findElement(By.id("team-name"));
   const city = await driver.findElement(By.id("city"));

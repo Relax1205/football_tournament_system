@@ -446,16 +446,7 @@ export function TournamentsClient() {
             </form>
           </section>
         </>
-      ) : (
-        <section className="card">
-          <div className="section-head">
-            <h2 className="section-title">Режим просмотра</h2>
-            <p className="section-subtitle">
-              Для вашей роли доступен просмотр списка турниров и их основных параметров.
-            </p>
-          </div>
-        </section>
-      )}
+      ) : null}
     </>
   );
 }

@@ -1,12 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
-import {
-  getDashboardSnapshot,
-  updateApplicationStatus,
-  updateUserRole,
-} from "@/components/mock-api";
+import { getDashboardSnapshot, updateUserRole } from "@/components/mock-api";
 import {
   ApplicationRecord,
   DemoUser,
@@ -37,6 +33,18 @@ export function DashboardRolePanels() {
     );
   }, []);
 
+  const roleSummary = useMemo(() => {
+    if (!snapshot) {
+      return [];
+    }
+
+    return Object.entries(roleLabels).map(([role, label]) => ({
+      role: role as DemoUser["role"],
+      label,
+      count: snapshot.users.filter((row) => row.role === role).length,
+    }));
+  }, [snapshot]);
+
   if (!user || !snapshot) {
     return null;
   }
@@ -46,135 +54,68 @@ export function DashboardRolePanels() {
       <section className="card panel-accent panel-admin">
         <div className="section-head">
           <h2 className="section-title">Управление ролями</h2>
-          <p className="section-subtitle">
-            Администратор может менять роль пользователя без перезагрузки страницы.
-          </p>
         </div>
-        <div className="table-wrap">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Пользователь</th>
-                <th>Email</th>
-                <th>Текущая роль</th>
-                <th>Изменить</th>
-              </tr>
-            </thead>
-            <tbody>
-              {snapshot.users.map((row) => (
-                <tr key={row.id}>
-                  <td>{row.name}</td>
-                  <td>{row.email}</td>
-                  <td>{roleLabels[row.role]}</td>
-                  <td>
-                    <select
-                      defaultValue={row.role}
-                      onChange={async (event) => {
-                        const updated = await updateUserRole(
-                          row.id,
-                          event.target.value as DemoUser["role"],
-                        );
+        <div className="role-overview-grid">
+          <article className="role-stat-card role-stat-card-wide">
+            <span>Пользователей в системе</span>
+            <strong>{snapshot.users.length}</strong>
+          </article>
+          {roleSummary.map((item) => (
+            <article className="role-stat-card" key={item.role}>
+              <span>{item.label}</span>
+              <strong>{item.count}</strong>
+            </article>
+          ))}
+        </div>
+        <div className="role-management-grid">
+          {snapshot.users.map((row) => (
+            <article className="role-user-card" key={row.id}>
+              <div className="role-user-head">
+                <div className="role-user-meta">
+                  <strong>{row.name}</strong>
+                  <span>{row.email}</span>
+                </div>
+                <span className="pill">{roleLabels[row.role]}</span>
+              </div>
+              <div className="field">
+                <label htmlFor={`role-${row.id}`}>Назначить роль</label>
+                <select
+                  id={`role-${row.id}`}
+                  onChange={async (event) => {
+                    const updated = await updateUserRole(
+                      row.id,
+                      event.target.value as DemoUser["role"],
+                    );
 
-                        setSnapshot((current) =>
-                          current
-                            ? {
-                                ...current,
-                                users: current.users.map((item) =>
-                                  item.id === updated.id ? updated : item,
-                                ),
-                              }
-                            : current,
-                        );
-                      }}
-                    >
-                      {Object.entries(roleLabels).map(([role, label]) => (
-                        <option key={role} value={role}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    setSnapshot((current) =>
+                      current
+                        ? {
+                            ...current,
+                            users: current.users.map((item) =>
+                              item.id === updated.id ? updated : item,
+                            ),
+                          }
+                        : current,
+                    );
+                  }}
+                  value={row.role}
+                >
+                  {Object.entries(roleLabels).map(([role, label]) => (
+                    <option key={role} value={role}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </article>
+          ))}
         </div>
       </section>
     );
   }
 
   if (user.role === "organizer") {
-    return (
-      <section className="card panel-accent panel-organizer">
-        <div className="section-head">
-          <h2 className="section-title">Организатор: оперативные задачи</h2>
-          <p className="section-subtitle">
-            Заявки можно одобрять или отклонять прямо из кабинета.
-          </p>
-        </div>
-        <ul className="list">
-          {snapshot.applications.map((application) => (
-            <li className="list-item list-item-spread" key={application.id}>
-              <div>
-                <strong>
-                  {application.team} · {application.tournament}
-                </strong>
-                Тренер: {application.coach} · Игроков: {application.playersCount}
-              </div>
-              <div className="inline-actions">
-                <span className="pill">{application.status}</span>
-                <button
-                  className="button button-secondary"
-                  onClick={async () => {
-                    const updated = await updateApplicationStatus(
-                      application.id,
-                      "Одобрена",
-                    );
-
-                    setSnapshot((current) =>
-                      current
-                        ? {
-                            ...current,
-                            applications: current.applications.map((item) =>
-                              item.id === updated.id ? updated : item,
-                            ),
-                          }
-                        : current,
-                    );
-                  }}
-                  type="button"
-                >
-                  Одобрить
-                </button>
-                <button
-                  className="button button-secondary"
-                  onClick={async () => {
-                    const updated = await updateApplicationStatus(
-                      application.id,
-                      "Отклонена",
-                    );
-
-                    setSnapshot((current) =>
-                      current
-                        ? {
-                            ...current,
-                            applications: current.applications.map((item) =>
-                              item.id === updated.id ? updated : item,
-                            ),
-                          }
-                        : current,
-                    );
-                  }}
-                  type="button"
-                >
-                  Отклонить
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </section>
-    );
+    return null;
   }
 
   if (user.role === "referee") {
@@ -182,9 +123,6 @@ export function DashboardRolePanels() {
       <section className="card panel-accent panel-referee">
         <div className="section-head">
           <h2 className="section-title">Судья: мои матчи</h2>
-          <p className="section-subtitle">
-            Быстрый обзор матчей, где нужно внести или уточнить результат.
-          </p>
         </div>
         <ul className="list">
           {snapshot.matches
@@ -210,9 +148,6 @@ export function DashboardRolePanels() {
       <section className="card panel-accent panel-coach">
         <div className="section-head">
           <h2 className="section-title">Тренер: статус моей команды</h2>
-          <p className="section-subtitle">
-            Отсюда можно быстро понять, что с заявкой и ближайшими матчами.
-          </p>
         </div>
         <ul className="list">
           {snapshot.applications
@@ -235,9 +170,6 @@ export function DashboardRolePanels() {
     <section className="card panel-accent panel-fan">
       <div className="section-head">
         <h2 className="section-title">Болельщик: открытые турниры</h2>
-        <p className="section-subtitle">
-          Публичный сценарий: обзор соревнований и готовность календаря.
-        </p>
       </div>
       <ul className="list">
         {snapshot.tournaments.map((tournament) => (

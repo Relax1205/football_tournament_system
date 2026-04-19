@@ -33,6 +33,39 @@ const initialForm: MatchForm = {
   status: "Требует подтверждения",
 };
 
+function isEditableMatch(match: MatchRecord) {
+  return match.apiStatus !== "CONFIRMED" && match.apiStatus !== "CANCELLED";
+}
+
+function getFirstAvailablePlayer(match: MatchRecord | null, players: PlayerRecord[]) {
+  if (!match) {
+    return "";
+  }
+
+  return (
+    players.find(
+      (player) =>
+        player.teamId === match.homeTeamId || player.teamId === match.awayTeamId,
+    )?.id ?? ""
+  );
+}
+
+function formatSaveError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return "Не удалось сохранить результат матча";
+  }
+
+  if (error.message.includes("Confirmed matches cannot be edited")) {
+    return "Подтверждённый матч нельзя редактировать";
+  }
+
+  if (error.message.includes("Request failed")) {
+    return "Не удалось сохранить результат матча";
+  }
+
+  return error.message;
+}
+
 export function MatchesClient() {
   const { user } = useAuth();
   const canEdit = user?.role === "admin" || user?.role === "organizer" || user?.role === "referee";
@@ -43,46 +76,18 @@ export function MatchesClient() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortKey, setSortKey] = useState<"date" | "status" | "home">("date");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitError, setSubmitError] = useState("");
   const [success, setSuccess] = useState("");
   const [form, setForm] = useState<MatchForm>(initialForm);
 
-  useEffect(() => {
-    void Promise.all([listMatches(), listPlayers()]).then(([loadedMatches, loadedPlayers]) => {
-      setItems(loadedMatches);
-      setPlayers(loadedPlayers);
-
-      const firstMatch = loadedMatches[0];
-      if (firstMatch) {
-        const firstPlayer = loadedPlayers.find(
-          (player) =>
-            player.teamId === firstMatch.homeTeamId || player.teamId === firstMatch.awayTeamId,
-        );
-
-        setForm((current) => ({
-          ...current,
-          matchId: firstMatch.id,
-          homeScore: String(firstMatch.homeScore),
-          awayScore: String(firstMatch.awayScore),
-          playerId: firstPlayer?.id ?? "",
-        }));
-      }
-    });
-  }, []);
-
-  const filteredItems = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-
-    return [...items]
-      .filter((match) => (statusFilter === "all" ? true : match.status === statusFilter))
-      .filter((match) =>
-        `${match.home} ${match.away} ${match.venue}`.toLowerCase().includes(normalizedQuery),
-      )
-      .sort((left, right) => String(left[sortKey]).localeCompare(String(right[sortKey]), "ru"));
-  }, [items, query, sortKey, statusFilter]);
+  const editableMatches = useMemo(
+    () => items.filter((match) => isEditableMatch(match)),
+    [items],
+  );
 
   const currentMatch = useMemo(
-    () => items.find((match) => match.id === form.matchId) ?? null,
-    [form.matchId, items],
+    () => editableMatches.find((match) => match.id === form.matchId) ?? null,
+    [editableMatches, form.matchId],
   );
 
   const availablePlayers = useMemo(() => {
@@ -95,6 +100,86 @@ export function MatchesClient() {
         player.teamId === currentMatch.homeTeamId || player.teamId === currentMatch.awayTeamId,
     );
   }, [currentMatch, players]);
+
+  useEffect(() => {
+    void Promise.all([listMatches(), listPlayers()]).then(([loadedMatches, loadedPlayers]) => {
+      setItems(loadedMatches);
+      setPlayers(loadedPlayers);
+
+      const firstEditableMatch = loadedMatches.find((match) => isEditableMatch(match)) ?? null;
+      const firstPlayer = getFirstAvailablePlayer(firstEditableMatch, loadedPlayers);
+
+      if (firstEditableMatch) {
+        setForm((current) => ({
+          ...current,
+          matchId: firstEditableMatch.id,
+          homeScore: String(firstEditableMatch.homeScore),
+          awayScore: String(firstEditableMatch.awayScore),
+          playerId: firstPlayer,
+        }));
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!canEdit) {
+      return;
+    }
+
+    const selectedMatch = editableMatches.find((match) => match.id === form.matchId) ?? null;
+    if (!selectedMatch) {
+      const fallbackMatch = editableMatches[0] ?? null;
+      if (!fallbackMatch) {
+        setForm((current) => ({
+          ...current,
+          matchId: "",
+          playerId: "",
+        }));
+        return;
+      }
+
+      setForm((current) => ({
+        ...current,
+        matchId: fallbackMatch.id,
+        homeScore: String(fallbackMatch.homeScore),
+        awayScore: String(fallbackMatch.awayScore),
+        playerId: getFirstAvailablePlayer(fallbackMatch, players),
+      }));
+      return;
+    }
+
+    const selectedPlayerAvailable = availablePlayers.some((player) => player.id === form.playerId);
+    if (!selectedPlayerAvailable) {
+      setForm((current) => ({
+        ...current,
+        playerId: getFirstAvailablePlayer(selectedMatch, players),
+      }));
+    }
+  }, [availablePlayers, canEdit, editableMatches, form.matchId, form.playerId, players]);
+
+  const filteredItems = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+
+    return [...items]
+      .filter((match) => (statusFilter === "all" ? true : match.status === statusFilter))
+      .filter((match) =>
+        `${match.home} ${match.away} ${match.venue}`.toLowerCase().includes(normalizedQuery),
+      )
+      .sort((left, right) => String(left[sortKey]).localeCompare(String(right[sortKey]), "ru"));
+  }, [items, query, sortKey, statusFilter]);
+
+  function handleMatchChange(matchId: string) {
+    const nextMatch = editableMatches.find((match) => match.id === matchId) ?? null;
+    const nextPlayerId = getFirstAvailablePlayer(nextMatch, players);
+
+    setForm((current) => ({
+      ...current,
+      matchId,
+      homeScore: String(nextMatch?.homeScore ?? current.homeScore),
+      awayScore: String(nextMatch?.awayScore ?? current.awayScore),
+      playerId: nextPlayerId,
+    }));
+  }
 
   function validate() {
     const nextErrors: Record<string, string> = {};
@@ -133,28 +218,41 @@ export function MatchesClient() {
     const validationErrors = validate();
     setErrors(validationErrors);
     setSuccess("");
+    setSubmitError("");
 
     if (Object.keys(validationErrors).length > 0) {
       return;
     }
 
-    const updated = await saveMatchResult({
-      awayScore: Number(form.awayScore),
-      comment: form.comment.trim(),
-      eventMinute: Number(form.eventMinute),
-      eventType: form.eventType,
-      homeScore: Number(form.homeScore),
-      matchId: form.matchId,
-      playerId: form.playerId || undefined,
-      status: user?.role === "organizer" || user?.role === "admin" ? "Подтверждён" : form.status,
-    });
+    if (!currentMatch) {
+      setSubmitError("Нет матча, доступного для ввода результата");
+      return;
+    }
 
-    setItems((current) => current.map((match) => (match.id === updated.id ? updated : match)));
-    setSuccess(
-      user?.role === "organizer" || user?.role === "admin"
-        ? "Результат сохранён и подтверждён"
-        : "Результат сохранён и отправлен организатору",
-    );
+    try {
+      const updated = await saveMatchResult({
+        awayScore: Number(form.awayScore),
+        comment: form.comment.trim(),
+        eventMinute: Number(form.eventMinute),
+        eventType: form.eventType,
+        homeScore: Number(form.homeScore),
+        matchId: form.matchId,
+        playerId: form.playerId || undefined,
+        status:
+          user?.role === "organizer" || user?.role === "admin"
+            ? "Подтверждён"
+            : form.status,
+      });
+
+      setItems((current) => current.map((match) => (match.id === updated.id ? updated : match)));
+      setSuccess(
+        user?.role === "organizer" || user?.role === "admin"
+          ? "Результат сохранён и подтверждён"
+          : "Результат сохранён и отправлен организатору",
+      );
+    } catch (error) {
+      setSubmitError(formatSaveError(error));
+    }
   }
 
   return (
@@ -162,10 +260,6 @@ export function MatchesClient() {
       <section className="card">
         <div className="page-head">
           <h1 className="page-title">Матчи и расписание</h1>
-          <p className="page-subtitle">
-            Раздел доступен всем ролям: болельщик и тренер просматривают календарь, судья и
-            организатор работают с результатами.
-          </p>
         </div>
         <div className="toolbar">
           <input
@@ -250,34 +344,20 @@ export function MatchesClient() {
         <section className="card">
           <div className="section-head">
             <h2 className="section-title">Ввод результата матча</h2>
-            <p className="section-subtitle">
-              Судья отправляет результат и событие матча, организатор может сразу подтвердить итог.
-            </p>
           </div>
+          {!currentMatch ? (
+            <div className="message-error">Нет матчей, доступных для ввода результата.</div>
+          ) : null}
           <form className="form-grid" noValidate onSubmit={handleSubmit}>
             <div className="field">
               <label htmlFor="match-id">Матч</label>
               <select
+                disabled={!currentMatch}
                 id="match-id"
-                onChange={(event) => {
-                  const nextMatch = items.find((match) => match.id === event.target.value);
-                  const nextPlayer = players.find(
-                    (player) =>
-                      player.teamId === nextMatch?.homeTeamId ||
-                      player.teamId === nextMatch?.awayTeamId,
-                  );
-
-                  setForm((current) => ({
-                    ...current,
-                    matchId: event.target.value,
-                    homeScore: String(nextMatch?.homeScore ?? current.homeScore),
-                    awayScore: String(nextMatch?.awayScore ?? current.awayScore),
-                    playerId: nextPlayer?.id ?? "",
-                  }));
-                }}
+                onChange={(event) => handleMatchChange(event.target.value)}
                 value={form.matchId}
               >
-                {items.map((match) => (
+                {editableMatches.map((match) => (
                   <option key={match.id} value={match.id}>
                     {match.home} / {match.away}
                   </option>
@@ -288,6 +368,7 @@ export function MatchesClient() {
             <div className="field">
               <label htmlFor="status">Статус</label>
               <select
+                disabled={!currentMatch}
                 id="status"
                 onChange={(event) =>
                   setForm((current) => ({
@@ -304,6 +385,7 @@ export function MatchesClient() {
             <div className="field">
               <label htmlFor="home-score">Голы хозяев</label>
               <input
+                disabled={!currentMatch}
                 id="home-score"
                 min="0"
                 onChange={(event) =>
@@ -317,6 +399,7 @@ export function MatchesClient() {
             <div className="field">
               <label htmlFor="away-score">Голы гостей</label>
               <input
+                disabled={!currentMatch}
                 id="away-score"
                 min="0"
                 onChange={(event) =>
@@ -330,6 +413,7 @@ export function MatchesClient() {
             <div className="field">
               <label htmlFor="event-player">Игрок</label>
               <select
+                disabled={!currentMatch}
                 id="event-player"
                 onChange={(event) =>
                   setForm((current) => ({ ...current, playerId: event.target.value }))
@@ -346,6 +430,7 @@ export function MatchesClient() {
             <div className="field">
               <label htmlFor="event-minute">Минута гола</label>
               <input
+                disabled={!currentMatch}
                 id="event-minute"
                 max="120"
                 min="1"
@@ -362,6 +447,7 @@ export function MatchesClient() {
             <div className="field">
               <label htmlFor="event-type">Событие</label>
               <select
+                disabled={!currentMatch}
                 id="event-type"
                 onChange={(event) =>
                   setForm((current) => ({
@@ -380,6 +466,7 @@ export function MatchesClient() {
             <div className="field field-wide">
               <label htmlFor="comment">Комментарий судьи</label>
               <input
+                disabled={!currentMatch}
                 id="comment"
                 onChange={(event) =>
                   setForm((current) => ({ ...current, comment: event.target.value }))
@@ -389,29 +476,24 @@ export function MatchesClient() {
               />
               {errors.comment ? <span className="field-error">{errors.comment}</span> : null}
             </div>
+            {submitError ? (
+              <div className="field field-wide">
+                <div className="message-error">{submitError}</div>
+              </div>
+            ) : null}
             {success ? (
               <div className="field field-wide">
                 <div className="message-success">{success}</div>
               </div>
             ) : null}
             <div className="field field-wide">
-              <button className="button button-primary" type="submit">
+              <button className="button button-primary" disabled={!currentMatch} type="submit">
                 Сохранить результат
               </button>
             </div>
           </form>
         </section>
-      ) : (
-        <section className="card">
-          <div className="section-head">
-            <h2 className="section-title">Режим просмотра</h2>
-            <p className="section-subtitle">
-              Для вашей роли доступен просмотр календаря, результатов и скачивание протокола без
-              прав редактирования.
-            </p>
-          </div>
-        </section>
-      )}
+      ) : null}
     </>
   );
 }

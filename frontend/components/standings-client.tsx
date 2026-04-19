@@ -10,6 +10,8 @@ import {
 } from "@/components/mock-api";
 import { StandingRecord, Tournament } from "@/components/mock-data";
 
+const DEFAULT_TOURNAMENT_NAME = "RTU Cup 2026";
+
 export function StandingsClient() {
   const { user } = useAuth();
   const [items, setItems] = useState<StandingRecord[]>([]);
@@ -23,11 +25,15 @@ export function StandingsClient() {
     void listTournaments().then((loadedTournaments) => {
       setTournaments(loadedTournaments);
 
-      const firstTournamentId = loadedTournaments[0]?.id ?? "";
-      setSelectedTournamentId(firstTournamentId);
+      const defaultTournamentId =
+        loadedTournaments.find((tournament) => tournament.name === DEFAULT_TOURNAMENT_NAME)?.id ??
+        loadedTournaments[0]?.id ??
+        "";
 
-      if (firstTournamentId) {
-        void listStandings(firstTournamentId).then(setItems);
+      setSelectedTournamentId(defaultTournamentId);
+
+      if (defaultTournamentId) {
+        void listStandings(defaultTournamentId).then(setItems);
       }
     });
   }, []);
@@ -52,14 +58,6 @@ export function StandingsClient() {
     <section className="card">
       <div className="page-head">
         <h1 className="page-title">Турнирная таблица</h1>
-        <p className="page-subtitle">
-          Таблица рассчитывается по правилам ФИФА: очки, разница голов, забитые голы.
-        </p>
-      </div>
-      <div className="meta">
-        <span className="pill success">ФИФА: очки</span>
-        <span className="pill success">Разница голов</span>
-        <span className="pill success">Забитые голы</span>
       </div>
       <div className="toolbar" style={{ marginTop: 18 }}>
         <select
