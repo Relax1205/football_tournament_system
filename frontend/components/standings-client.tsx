@@ -107,7 +107,13 @@ export function StandingsClient() {
           </a>
         ) : null}
       </div>
-      {success ? <div className="message-success">{success}</div> : null}
+      <div className="form-feedback-slot">
+        {success ? (
+          <div className="message-success">{success}</div>
+        ) : (
+          <div aria-hidden="true" className="message-placeholder" />
+        )}
+      </div>
       <div className="table-wrap">
         <table className="table">
           <thead>

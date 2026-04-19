@@ -79,6 +79,7 @@ async function createUser(email: string, name: string, role: Role, password: str
 }
 
 async function main() {
+  await prisma.notification.deleteMany();
   await prisma.matchEvent.deleteMany();
   await prisma.tournamentStanding.deleteMany();
   await prisma.match.deleteMany();
@@ -94,12 +95,53 @@ async function main() {
     },
   });
 
-  await createUser('admin@tournament.ru', 'Ivan Administrator', Role.ADMIN, DEMO_PASSWORD);
+  const admin = await createUser('admin@tournament.ru', 'Ivan Administrator', Role.ADMIN, DEMO_PASSWORD);
   const organizer = await createUser('org@tournament.ru', 'Maria Organizer', Role.ORGANIZER, DEMO_PASSWORD);
   const referee = await createUser('referee@tournament.ru', 'Sergey Referee', Role.REFEREE, DEMO_PASSWORD);
   const coach1 = await createUser('coach@tournament.ru', 'Alexey Coach', Role.COACH, DEMO_PASSWORD);
   const coach2 = await createUser('coach2@team.ru', 'Dmitry Coach', Role.COACH, DEMO_PASSWORD);
-  await createUser('fan@tournament.ru', 'Maxim Fan', Role.VIEWER, DEMO_PASSWORD);
+  const fan = await createUser('fan@tournament.ru', 'Maxim Fan', Role.VIEWER, DEMO_PASSWORD);
+
+  await prisma.notification.createMany({
+    data: [
+      {
+        userId: admin.id,
+        title: 'Админ-панель готова',
+        message: 'Назначайте роли новым пользователям и отслеживайте состояние демонстрационного стенда.',
+        kind: 'info',
+      },
+      {
+        userId: organizer.id,
+        title: 'Данные для проверки загружены',
+        message: 'В системе уже есть турниры, заявки, матчи и таблица для быстрой проверки сценариев.',
+        kind: 'info',
+      },
+      {
+        userId: referee.id,
+        title: 'Матчи назначены',
+        message: 'Откройте раздел матчей и внесите результаты для демонстрации рабочего процесса.',
+        kind: 'info',
+      },
+      {
+        userId: coach1.id,
+        title: 'Команда готова к проверке',
+        message: 'Вы можете подать новую заявку, добавить игроков или просмотреть составы команды.',
+        kind: 'info',
+      },
+      {
+        userId: coach2.id,
+        title: 'Заявки ожидают решения',
+        message: 'Часть заявок уже создана в seed-данных, чтобы можно было проверить сценарии одобрения и отклонения.',
+        kind: 'info',
+      },
+      {
+        userId: fan.id,
+        title: 'Добро пожаловать',
+        message: 'Роль зрителя открывает доступ к просмотру турниров, матчей и турнирной таблицы.',
+        kind: 'info',
+      },
+    ],
+  });
 
   const activeTournament = await prisma.tournament.create({
     data: {

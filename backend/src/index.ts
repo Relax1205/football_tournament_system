@@ -7,6 +7,7 @@ import authRoutes = require('./modules/auth/auth.routes');
 import matchEventRoutes = require('./modules/match-events/match-event.routes');
 import matchRoutes = require('./modules/matches/match.routes');
 import playerRoutes = require('./modules/players/player.routes');
+import notificationRoutes = require('./modules/notifications/notification.routes');
 import reportRoutes = require('./modules/reports/report.routes');
 import scheduleRoutes = require('./modules/schedule/schedule.routes');
 import standingsRoutes = require('./modules/standings/standings.routes');
@@ -28,6 +29,7 @@ app.get('/health', (_request, response) => {
 });
 
 app.use('/api/auth', authRoutes);
+app.use('/api/notifications', notificationRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/tournaments', tournamentRoutes);
 app.use('/api/teams', teamRoutes);

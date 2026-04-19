@@ -289,7 +289,9 @@ export function TournamentsClient() {
                   placeholder="Например, Кубок весны 2026"
                   value={form.name}
                 />
-                {errors.name ? <span className="field-error">{errors.name}</span> : null}
+                <span className={`field-error${errors.name ? "" : " is-empty"}`}>
+                  {errors.name || "\u00a0"}
+                </span>
               </div>
               <div className="field">
                 <label htmlFor="format">Формат этапа</label>
@@ -315,9 +317,9 @@ export function TournamentsClient() {
                   type="date"
                   value={form.startDate}
                 />
-                {errors.startDate ? (
-                  <span className="field-error">{errors.startDate}</span>
-                ) : null}
+                <span className={`field-error${errors.startDate ? "" : " is-empty"}`}>
+                  {errors.startDate || "\u00a0"}
+                </span>
               </div>
               <div className="field">
                 <label htmlFor="end-date">Дата окончания</label>
@@ -329,7 +331,9 @@ export function TournamentsClient() {
                   type="date"
                   value={form.endDate}
                 />
-                {errors.endDate ? <span className="field-error">{errors.endDate}</span> : null}
+                <span className={`field-error${errors.endDate ? "" : " is-empty"}`}>
+                  {errors.endDate || "\u00a0"}
+                </span>
               </div>
               <div className="field">
                 <label htmlFor="groups">Количество групп</label>
@@ -343,7 +347,9 @@ export function TournamentsClient() {
                   type="number"
                   value={form.groups}
                 />
-                {errors.groups ? <span className="field-error">{errors.groups}</span> : null}
+                <span className={`field-error${errors.groups ? "" : " is-empty"}`}>
+                  {errors.groups || "\u00a0"}
+                </span>
               </div>
               <div className="field">
                 <label htmlFor="status">Стартовый статус</label>
@@ -362,11 +368,13 @@ export function TournamentsClient() {
                   <option value="Активен">Активен</option>
                 </select>
               </div>
-              {success ? (
-                <div className="field field-wide">
+              <div className="field field-wide form-feedback-slot">
+                {success ? (
                   <div className="message-success">{success}</div>
-                </div>
-              ) : null}
+                ) : (
+                  <div aria-hidden="true" className="message-placeholder" />
+                )}
+              </div>
               <div className="field field-wide">
                 <button className="button button-primary" type="submit">
                   Создать турнир
@@ -401,9 +409,9 @@ export function TournamentsClient() {
                     </option>
                   ))}
                 </select>
-                {scheduleErrors.tournamentId ? (
-                  <span className="field-error">{scheduleErrors.tournamentId}</span>
-                ) : null}
+                <span className={`field-error${scheduleErrors.tournamentId ? "" : " is-empty"}`}>
+                  {scheduleErrors.tournamentId || "\u00a0"}
+                </span>
               </div>
               <div className="field">
                 <label htmlFor="schedule-start-date">Дата первого тура</label>
@@ -415,9 +423,9 @@ export function TournamentsClient() {
                   type="date"
                   value={scheduleForm.startDate}
                 />
-                {scheduleErrors.startDate ? (
-                  <span className="field-error">{scheduleErrors.startDate}</span>
-                ) : null}
+                <span className={`field-error${scheduleErrors.startDate ? "" : " is-empty"}`}>
+                  {scheduleErrors.startDate || "\u00a0"}
+                </span>
               </div>
               <div className="field">
                 <label htmlFor="schedule-days">Дней между турами</label>
@@ -434,9 +442,11 @@ export function TournamentsClient() {
                   type="number"
                   value={scheduleForm.daysBetweenRounds}
                 />
-                {scheduleErrors.daysBetweenRounds ? (
-                  <span className="field-error">{scheduleErrors.daysBetweenRounds}</span>
-                ) : null}
+                <span
+                  className={`field-error${scheduleErrors.daysBetweenRounds ? "" : " is-empty"}`}
+                >
+                  {scheduleErrors.daysBetweenRounds || "\u00a0"}
+                </span>
               </div>
               <div className="field field-wide">
                 <button className="button button-primary" type="submit">

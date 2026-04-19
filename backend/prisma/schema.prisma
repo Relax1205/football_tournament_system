@@ -63,6 +63,7 @@ model User {
   matchesAsReferee Match[]
   teamsAsCoach     Team[]
   applications     Application[]
+  notifications    Notification[]
 
   @@map("users")
 }
@@ -163,6 +164,21 @@ model MatchEvent {
   player    Player    @relation(fields: [playerId], references: [id])
 
   @@map("match_events")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  title     String
+  message   String
+  kind      String   @default("info")
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("notifications")
 }
 
 model TournamentStanding {

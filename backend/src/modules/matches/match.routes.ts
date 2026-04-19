@@ -38,7 +38,7 @@ router.post('/', authenticate, requireRoles(Role.ADMIN, Role.ORGANIZER), async (
 
 router.put('/:id/score', authenticate, requireRoles(Role.ADMIN, Role.ORGANIZER, Role.REFEREE), async (request, response) => {
   try {
-    const match = await MatchService.updateScore(request.params.id, request.body);
+    const match = await MatchService.updateScore(request.params.id, request.body, request.auth!.userId);
     response.json({ success: true, data: match });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -55,7 +55,7 @@ router.put('/:id/score', authenticate, requireRoles(Role.ADMIN, Role.ORGANIZER, 
 
 router.patch('/:id/confirm', authenticate, requireRoles(Role.ADMIN, Role.ORGANIZER), async (request, response) => {
   try {
-    const match = await MatchService.confirmMatch(request.params.id);
+    const match = await MatchService.confirmMatch(request.params.id, request.auth!.userId);
     response.json({ success: true, data: match });
   } catch (error) {
     if (error instanceof Error) {

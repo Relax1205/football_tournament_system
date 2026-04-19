@@ -445,7 +445,9 @@ export function TeamManagementPanels() {
                 placeholder="Uralets"
                 value={form.team}
               />
-              {errors.team ? <span className="field-error">{errors.team}</span> : null}
+              <span className={`field-error${errors.team ? "" : " is-empty"}`}>
+                {errors.team || "\u00a0"}
+              </span>
             </div>
             <div className="field">
               <label htmlFor="city">Город</label>
@@ -457,7 +459,9 @@ export function TeamManagementPanels() {
                 placeholder="Екатеринбург"
                 value={form.city}
               />
-              {errors.city ? <span className="field-error">{errors.city}</span> : null}
+              <span className={`field-error${errors.city ? "" : " is-empty"}`}>
+                {errors.city || "\u00a0"}
+              </span>
             </div>
             <div className="field">
               <label htmlFor="coach">Тренер</label>
@@ -469,7 +473,9 @@ export function TeamManagementPanels() {
                 placeholder="Андрей Смирнов"
                 value={form.coach}
               />
-              {errors.coach ? <span className="field-error">{errors.coach}</span> : null}
+              <span className={`field-error${errors.coach ? "" : " is-empty"}`}>
+                {errors.coach || "\u00a0"}
+              </span>
             </div>
             <div className="field">
               <label htmlFor="players-count">Количество игроков</label>
@@ -483,9 +489,9 @@ export function TeamManagementPanels() {
                 type="number"
                 value={form.playersCount}
               />
-              {errors.playersCount ? (
-                <span className="field-error">{errors.playersCount}</span>
-              ) : null}
+              <span className={`field-error${errors.playersCount ? "" : " is-empty"}`}>
+                {errors.playersCount || "\u00a0"}
+              </span>
             </div>
             <div className="field field-wide">
               <label htmlFor="tournament-name">Турнир</label>
@@ -502,15 +508,17 @@ export function TeamManagementPanels() {
                   </option>
                 ))}
               </select>
-              {errors.tournament ? (
-                <span className="field-error">{errors.tournament}</span>
-              ) : null}
+              <span className={`field-error${errors.tournament ? "" : " is-empty"}`}>
+                {errors.tournament || "\u00a0"}
+              </span>
             </div>
-            {success ? (
-              <div className="field field-wide">
+            <div className="field field-wide form-feedback-slot">
+              {success ? (
                 <div className="message-success">{success}</div>
-              </div>
-            ) : null}
+              ) : (
+                <div aria-hidden="true" className="message-placeholder" />
+              )}
+            </div>
             <div className="field field-wide">
               <button className="button button-primary" type="submit">
                 Подать заявку
@@ -537,7 +545,9 @@ export function TeamManagementPanels() {
                   placeholder="North Legion"
                   value={teamForm.name}
                 />
-                {teamErrors.name ? <span className="field-error">{teamErrors.name}</span> : null}
+                <span className={`field-error${teamErrors.name ? "" : " is-empty"}`}>
+                  {teamErrors.name || "\u00a0"}
+                </span>
               </div>
               <div className="field">
                 <label htmlFor="create-team-city">Город</label>
@@ -549,7 +559,9 @@ export function TeamManagementPanels() {
                   placeholder="Москва"
                   value={teamForm.city}
                 />
-                {teamErrors.city ? <span className="field-error">{teamErrors.city}</span> : null}
+                <span className={`field-error${teamErrors.city ? "" : " is-empty"}`}>
+                  {teamErrors.city || "\u00a0"}
+                </span>
               </div>
               <div className="field">
                 <label htmlFor="create-team-tournament">Турнир</label>
@@ -569,9 +581,9 @@ export function TeamManagementPanels() {
                     </option>
                   ))}
                 </select>
-                {teamErrors.tournamentId ? (
-                  <span className="field-error">{teamErrors.tournamentId}</span>
-                ) : null}
+                <span className={`field-error${teamErrors.tournamentId ? "" : " is-empty"}`}>
+                  {teamErrors.tournamentId || "\u00a0"}
+                </span>
               </div>
               <div className="field">
                 <label htmlFor="create-team-coach">Тренер</label>
@@ -622,15 +634,17 @@ export function TeamManagementPanels() {
                 <span className="table-muted">
                   Поддерживается один CSV-файл со столбцами `firstName,lastName,number`.
                 </span>
-                {teamErrors.csvText ? (
-                  <span className="field-error">{teamErrors.csvText}</span>
-                ) : null}
+                <span className={`field-error${teamErrors.csvText ? "" : " is-empty"}`}>
+                  {teamErrors.csvText || "\u00a0"}
+                </span>
               </div>
-              {teamSuccess ? (
-                <div className="field field-wide">
+              <div className="field field-wide form-feedback-slot">
+                {teamSuccess ? (
                   <div className="message-success">{teamSuccess}</div>
-                </div>
-              ) : null}
+                ) : (
+                  <div aria-hidden="true" className="message-placeholder" />
+                )}
+              </div>
               <div className="field field-wide">
                 <button className="button button-primary" type="submit">
                   Создать команду
@@ -660,9 +674,9 @@ export function TeamManagementPanels() {
                   </option>
                 ))}
               </select>
-              {playerErrors.teamId ? (
-                <span className="field-error">{playerErrors.teamId}</span>
-              ) : null}
+              <span className={`field-error${playerErrors.teamId ? "" : " is-empty"}`}>
+                {playerErrors.teamId || "\u00a0"}
+              </span>
             </div>
             <div className="field">
               <label htmlFor="player-first-name">Имя</label>
@@ -673,9 +687,9 @@ export function TeamManagementPanels() {
                 }
                 value={playerForm.firstName}
               />
-              {playerErrors.firstName ? (
-                <span className="field-error">{playerErrors.firstName}</span>
-              ) : null}
+              <span className={`field-error${playerErrors.firstName ? "" : " is-empty"}`}>
+                {playerErrors.firstName || "\u00a0"}
+              </span>
             </div>
             <div className="field">
               <label htmlFor="player-last-name">Фамилия</label>
@@ -686,9 +700,9 @@ export function TeamManagementPanels() {
                 }
                 value={playerForm.lastName}
               />
-              {playerErrors.lastName ? (
-                <span className="field-error">{playerErrors.lastName}</span>
-              ) : null}
+              <span className={`field-error${playerErrors.lastName ? "" : " is-empty"}`}>
+                {playerErrors.lastName || "\u00a0"}
+              </span>
             </div>
             <div className="field">
               <label htmlFor="player-number">Номер</label>
@@ -702,15 +716,17 @@ export function TeamManagementPanels() {
                 type="number"
                 value={playerForm.number}
               />
-              {playerErrors.number ? (
-                <span className="field-error">{playerErrors.number}</span>
-              ) : null}
+              <span className={`field-error${playerErrors.number ? "" : " is-empty"}`}>
+                {playerErrors.number || "\u00a0"}
+              </span>
             </div>
-            {playerSuccess ? (
-              <div className="field field-wide">
+            <div className="field field-wide form-feedback-slot">
+              {playerSuccess ? (
                 <div className="message-success">{playerSuccess}</div>
-              </div>
-            ) : null}
+              ) : (
+                <div aria-hidden="true" className="message-placeholder" />
+              )}
+            </div>
             <div className="field field-wide">
               <button className="button button-primary" type="submit">
                 Добавить игрока

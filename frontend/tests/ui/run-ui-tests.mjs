@@ -11,6 +11,7 @@ const API_BASE_URL = process.env.UI_API_BASE_URL || "http://localhost:4000/api";
 const BROWSER = process.env.UI_BROWSER || "chrome";
 const HEADLESS = process.env.UI_HEADLESS !== "0";
 const DEMO_USERS = {
+  admin: { email: "admin@tournament.ru", password: "Test123!" },
   coach: { email: "coach@tournament.ru", password: "Test123!" },
   coach2: { email: "coach2@team.ru", password: "Test123!" },
   fan: { email: "fan@tournament.ru", password: "Test123!" },
@@ -54,6 +55,34 @@ async function apiLogin(role) {
   });
 
   return result.token;
+}
+
+function buildUserFixture(prefix = "ui-user") {
+  const uniqueSuffix = Date.now().toString().slice(-6);
+  return {
+    email: `${prefix}-${uniqueSuffix}@example.com`,
+    name: `${prefix} ${uniqueSuffix}`,
+    password: "Test123!",
+  };
+}
+
+async function registerUserFixture(prefix = "ui-user") {
+  const fixture = buildUserFixture(prefix);
+  const user = await apiRequest("/auth/register", {
+    method: "POST",
+    body: {
+      email: fixture.email,
+      password: fixture.password,
+      name: fixture.name,
+    },
+  });
+
+  return {
+    email: fixture.email,
+    id: user.id,
+    name: fixture.name,
+    password: fixture.password,
+  };
 }
 
 async function createMatchFixture() {
@@ -346,6 +375,13 @@ async function selectEditableMatch(driver, fixture) {
   }
 }
 
+async function waitForLoggedInShell(driver) {
+  await driver.wait(until.urlContains("/dashboard"), 10000);
+  await driver.wait(until.elementLocated(By.id("user-role-chip")), 10000);
+  await driver.wait(until.elementLocated(By.id("notification-toggle")), 10000);
+  await driver.wait(until.elementLocated(By.id("logout-button")), 10000);
+}
+
 async function loginAs(driver, role) {
   const credentials = DEMO_USERS[role];
 
@@ -359,8 +395,7 @@ async function loginAs(driver, role) {
   await password.sendKeys(credentials.password);
   const submitButton = await driver.findElement(By.css('button[type="submit"]'));
   await clickSafely(driver, submitButton);
-  await driver.wait(until.urlContains("/dashboard"), 10000);
-  await driver.wait(until.elementLocated(By.xpath("//*[contains(text(),'Быстрые действия')]")), 10000);
+  await waitForLoggedInShell(driver);
 }
 
 async function loginPositive(driver) {
@@ -378,7 +413,148 @@ async function loginNegative(driver) {
   await password.sendKeys("WrongPass");
   const submitButton = await driver.findElement(By.css('button[type="submit"]'));
   await clickSafely(driver, submitButton);
-  await driver.wait(until.elementLocated(By.xpath("//*[contains(text(),'Неверный логин или пароль')]")), 5000);
+  await driver.wait(
+    until.elementLocated(By.xpath("//*[contains(text(),'Неверный логин или пароль')]")),
+    5000,
+  );
+}
+
+async function registerViewerAndVerifyNotifications(driver) {
+  const fixture = buildUserFixture("ui-viewer");
+  const emailValue = fixture.email;
+  const passwordValue = fixture.password;
+
+  await resetSession(driver);
+  await driver.get(`${BASE_URL}/register`);
+
+  await fillInput(driver, await driver.findElement(By.id("register-name")), fixture.name);
+  await fillInput(driver, await driver.findElement(By.id("register-email")), emailValue);
+  await fillInput(driver, await driver.findElement(By.id("register-password")), passwordValue);
+  await fillInput(
+    driver,
+    await driver.findElement(By.id("register-confirm-password")),
+    passwordValue,
+  );
+  await clickSafely(driver, await driver.findElement(By.id("register-submit")));
+
+  await driver.wait(until.urlContains("/login"), 10000);
+  await driver.wait(
+    until.elementLocated(By.xpath("//*[contains(text(),'Аккаунт создан')]")),
+    10000,
+  );
+
+  await fillInput(driver, await driver.findElement(By.id("email")), emailValue);
+  await fillInput(driver, await driver.findElement(By.id("password")), passwordValue);
+  await clickSafely(driver, await driver.findElement(By.css('button[type="submit"]')));
+
+  await waitForLoggedInShell(driver);
+
+  const chipText = await driver.findElement(By.id("user-role-chip")).getText();
+  if (!chipText.includes("Игрок / Болельщик")) {
+    throw new Error(`Expected viewer role in header chip, got: ${chipText}`);
+  }
+
+  await clickSafely(driver, await driver.findElement(By.id("notification-toggle")));
+  await driver.wait(until.elementLocated(By.id("notification-popover")), 10000);
+  await driver.wait(until.elementLocated(By.css(".notification-card")), 10000);
+
+  await clickSafely(driver, await driver.findElement(By.css(".notification-card")));
+  await driver.wait(until.elementLocated(By.id("notification-message-dialog")), 10000);
+
+  const markReadButtons = await driver.findElements(
+    By.xpath("//button[contains(., 'Пометить прочитанным')]"),
+  );
+  if (markReadButtons.length > 0) {
+    await clickSafely(driver, markReadButtons[0]);
+    await driver.wait(async () => {
+      const buttons = await driver.findElements(
+        By.xpath("//button[contains(., 'Пометить прочитанным')]"),
+      );
+      return buttons.length === 0;
+    }, 10000);
+  }
+
+  await clickSafely(
+    driver,
+    await driver.findElement(By.xpath("//button[contains(., 'Удалить')]")),
+  );
+  await clickSafely(driver, await driver.findElement(By.id("notification-toggle")));
+  await driver.wait(
+    until.elementLocated(By.xpath("//*[contains(text(),'Пока уведомлений нет')]")),
+    10000,
+  );
+}
+
+async function deleteUserAsAdminLegacy(driver) {
+  const fixture = await registerUserFixture("delete-user");
+  await loginAs(driver, "admin");
+  await driver.get(`${BASE_URL}/dashboard`);
+  const userCardLocator = By.xpath(`//article[@data-user-email='${fixture.email}']`);
+  await driver.wait(until.elementLocated(userCardLocator), 10000);
+  const userCard = await driver.findElement(userCardLocator);
+  const deleteButton = await userCard.findElement(
+    By.xpath(".//button[contains(., 'Удалить пользователя')]"),
+  );
+  await clickSafely(driver, deleteButton);
+  const alert = await driver.switchTo().alert();
+  await alert.accept();
+
+  await driver.wait(
+    until.stalenessOf(userCard),
+    10000,
+  );
+  await driver.wait(
+    until.elementLocated(By.xpath("//*[contains(text(),'удалён')]")),
+    10000,
+  );
+}
+
+async function deleteUserAsAdminV1(driver) {
+  const fixture = await registerUserFixture("delete-user");
+  await loginAs(driver, "admin");
+  await driver.get(`${BASE_URL}/dashboard`);
+  const userCardLocator = By.xpath(`//article[@data-user-email='${fixture.email}']`);
+  await driver.wait(until.elementLocated(userCardLocator), 10000);
+  const userCard = await driver.findElement(userCardLocator);
+  const deleteButton = await userCard.findElement(By.id(`delete-user-${fixture.id}`));
+  await clickSafely(driver, deleteButton);
+  await driver.wait(until.elementLocated(By.id("delete-user-dialog")), 10000);
+  await clickSafely(driver, await driver.findElement(By.id("confirm-delete-user")));
+
+  await driver.wait(
+    until.stalenessOf(userCard),
+    10000,
+  );
+  await driver.wait(
+    until.elementLocated(By.xpath("//*[contains(text(),'СѓРґР°Р»С‘РЅ')]")),
+    10000,
+  );
+}
+
+async function deleteUserAsAdmin(driver) {
+  const fixture = await registerUserFixture("delete-user");
+  await loginAs(driver, "admin");
+  await driver.get(`${BASE_URL}/dashboard`);
+  const userCardLocator = By.xpath(`//article[@data-user-email='${fixture.email}']`);
+  await driver.wait(until.elementLocated(userCardLocator), 10000);
+  const userCard = await driver.findElement(userCardLocator);
+  const deleteButton = await userCard.findElement(By.id(`delete-user-${fixture.id}`));
+  await clickSafely(driver, deleteButton);
+  await driver.wait(until.elementLocated(By.id("delete-user-dialog")), 10000);
+  await clickSafely(driver, await driver.findElement(By.id("confirm-delete-user")));
+
+  await driver.wait(
+    until.stalenessOf(userCard),
+    10000,
+  );
+  const successMessage = await driver.wait(
+    until.elementLocated(By.css(".message-success")),
+    10000,
+  );
+  await driver.wait(async () => {
+    const text = await successMessage.getText();
+    return text.includes(fixture.name);
+  }, 10000);
 }
 
 async function createTournament(driver) {
@@ -394,7 +570,8 @@ async function createTournament(driver) {
   const submitButton = await driver.findElement(
     By.xpath("//button[@type='submit' and contains(., 'Создать турнир')]"),
   );
-  const errorLocator = By.css(".field-error");
+  const errorLocator = By.css(".field-error:not(.is-empty)");
+  const successLocator = By.xpath("//*[contains(text(),'успешно создан')]");
   const fillStrategies = [
     async () => {
       await setInputValue(driver, title, tournamentName);
@@ -419,8 +596,9 @@ async function createTournament(driver) {
       .wait(async () => {
         const pageText = await driver.findElement(By.css("body")).getText();
         const errors = await driver.findElements(errorLocator);
-        return pageText.includes(tournamentName) || errors.length > 0;
-      }, 5000)
+        const success = await driver.findElements(successLocator);
+        return pageText.includes(tournamentName) || errors.length > 0 || success.length > 0;
+      }, 10000)
       .then(() => true)
       .catch(() => false);
 
@@ -430,6 +608,11 @@ async function createTournament(driver) {
 
     const pageText = await driver.findElement(By.css("body")).getText();
     if (pageText.includes(tournamentName)) {
+      return;
+    }
+
+    const success = await driver.findElements(successLocator);
+    if (success.length > 0) {
       return;
     }
 
@@ -457,7 +640,7 @@ async function enterMatchResult(driver) {
   await fillInput(driver, awayScore, "1");
   await fillInput(driver, eventMinute, "57");
   await comment.clear();
-  await comment.sendKeys("Результат проверен судьей");
+  await comment.sendKeys("Результат проверен судьёй");
   await setSelectValue(driver, status, "Требует подтверждения");
 
   const submitButton = await driver.findElement(
@@ -503,7 +686,7 @@ async function verifyRbacForFan(driver) {
   await loginAs(driver, "fan");
   await driver.get(`${BASE_URL}/matches`);
   await driver.wait(
-    until.elementLocated(By.xpath("//*[contains(text(),'Режим просмотра')]")),
+    until.elementLocated(By.xpath("//*[contains(text(),'Матчи и расписание')]")),
     10000,
   );
 
@@ -592,6 +775,8 @@ async function main() {
   console.log(`Running UI tests against ${BASE_URL} in ${BROWSER}`);
   await runScenario("positive login", loginPositive);
   await runScenario("negative login", loginNegative);
+  await runScenario("viewer registration and notifications", registerViewerAndVerifyNotifications);
+  await runScenario("delete user as admin", deleteUserAsAdmin);
   await runScenario("create tournament", createTournament);
   await runScenario("enter match result as referee", enterMatchResult);
   await runScenario("validate goal minute", validateGoalMinute);

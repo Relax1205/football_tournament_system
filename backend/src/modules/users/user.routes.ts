@@ -43,4 +43,17 @@ router.patch('/:id/role', authenticate, requireRoles(Role.ADMIN), async (request
   }
 });
 
+router.delete('/:id', authenticate, requireRoles(Role.ADMIN), async (request, response) => {
+  try {
+    const user = await UserService.delete(request.params.id, request.auth!.userId);
+    response.json({ success: true, data: user });
+  } catch (error) {
+    if (error instanceof Error) {
+      return response.status(400).json({ success: false, error: error.message });
+    }
+
+    response.status(500).json({ success: false, error: 'Unable to delete user' });
+  }
+});
+
 export = router;

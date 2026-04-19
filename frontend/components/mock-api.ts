@@ -8,6 +8,8 @@ import {
   MatchEventType,
   MatchRecord,
   MatchStatus,
+  NotificationKind,
+  NotificationRecord,
   PlayerRecord,
   StandingRecord,
   TeamRecord,
@@ -162,6 +164,15 @@ type ApiApplication = {
   };
 };
 
+type ApiNotification = {
+  id: string;
+  title: string;
+  message: string;
+  kind?: string | null;
+  isRead: boolean;
+  createdAt: string;
+};
+
 type CreateTournamentInput = {
   endDate: string;
   format: string;
@@ -249,6 +260,16 @@ function formatTime(date: string) {
   }).format(new Date(date));
 }
 
+function formatDateTime(date: string) {
+  return new Intl.DateTimeFormat("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(date));
+}
+
 function mapEventType(type: string): MatchEventType {
   switch (type) {
     case "YELLOW_CARD":
@@ -259,6 +280,17 @@ function mapEventType(type: string): MatchEventType {
       return "substitution";
     default:
       return "goal";
+  }
+}
+
+function mapNotificationKind(kind?: string | null): NotificationKind {
+  switch ((kind ?? "").toLowerCase()) {
+    case "success":
+      return "success";
+    case "warning":
+      return "warning";
+    default:
+      return "info";
   }
 }
 
@@ -365,6 +397,17 @@ function mapUser(item: ApiUser): DemoUser {
   };
 }
 
+function mapNotification(item: ApiNotification): NotificationRecord {
+  return {
+    id: item.id,
+    title: item.title,
+    message: item.message,
+    kind: mapNotificationKind(item.kind),
+    isRead: item.isRead,
+    createdAt: formatDateTime(item.createdAt),
+  };
+}
+
 async function requestJson<T>(
   path: string,
   init?: RequestInit,
@@ -425,6 +468,22 @@ export async function loginUser(email: string, password: string) {
       password: "",
     },
   };
+}
+
+export async function registerUser(name: string, email: string, password: string) {
+  const user = await requestJson<ApiUser>(
+    "/api/auth/register",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        name,
+        email,
+        password,
+      }),
+    },
+  );
+
+  return mapUser(user);
 }
 
 export async function listTournaments() {
@@ -664,6 +723,17 @@ export async function updateUserRole(userId: string, role: UserRole) {
   return mapUser(user);
 }
 
+export async function deleteUser(userId: string) {
+  const user = await requestJson<ApiUser>(
+    `/api/users/${userId}`,
+    {
+      method: "DELETE",
+    },
+  );
+
+  return mapUser(user);
+}
+
 export async function listTeams(tournamentId?: string) {
   const query = tournamentId ? `?tournamentId=${encodeURIComponent(tournamentId)}` : "";
   const teams = await requestJson<ApiTeam[]>(`/api/teams${query}`);
@@ -708,6 +778,40 @@ export async function generateSchedule(input: GenerateScheduleInput) {
   );
 
   return matches.map(mapMatch);
+}
+
+export async function listNotifications() {
+  const notifications = await requestJson<ApiNotification[]>("/api/notifications");
+  return notifications.map(mapNotification);
+}
+
+export async function markNotificationRead(notificationId: string) {
+  const notification = await requestJson<ApiNotification>(
+    `/api/notifications/${notificationId}/read`,
+    {
+      method: "PATCH",
+    },
+  );
+
+  return mapNotification(notification);
+}
+
+export async function markAllNotificationsRead() {
+  return requestJson<{ count: number }>(
+    "/api/notifications/read-all",
+    {
+      method: "PATCH",
+    },
+  );
+}
+
+export async function deleteNotification(notificationId: string) {
+  return requestJson<{ id: string }>(
+    `/api/notifications/${notificationId}`,
+    {
+      method: "DELETE",
+    },
+  );
 }
 
 export function getMatchReportUrl(matchId: string) {

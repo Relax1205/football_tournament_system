@@ -1,10 +1,11 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import Link from "next/link";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/components/auth-provider";
 import { LayoutShell } from "@/components/layout-shell";
 import { demoUsers, roleLabels } from "@/components/mock-data";
-import { useAuth } from "@/components/auth-provider";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -13,6 +14,18 @@ export default function LoginPage() {
   const [password, setPassword] = useState("Test123!");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [registered, setRegistered] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const prefilledEmail = params.get("email");
+    setRegistered(params.get("registered") === "1");
+
+    if (prefilledEmail) {
+      setEmail(prefilledEmail);
+      setPassword("");
+    }
+  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -37,11 +50,18 @@ export default function LoginPage() {
           <article className="card">
             <div className="page-head">
               <h1 className="page-title">Вход в систему</h1>
-              <p className="page-subtitle">
-                Авторизация через backend с тестовыми ролями для проверки RBAC и основных
-                пользовательских сценариев.
+              <p className="login-helper-copy">
+                Авторизуйтесь, чтобы работать с турнирами, матчами, заявками и уведомлениями.
               </p>
             </div>
+
+            {registered ? (
+              <div className="message-success login-page-message">
+                Аккаунт создан. После входа вы попадёте в систему как зритель, а администратор при
+                необходимости выдаст расширенные права.
+              </div>
+            ) : null}
+
             <form className="form-grid" onSubmit={handleSubmit}>
               <div className="field field-wide">
                 <label htmlFor="email">Email</label>
@@ -61,24 +81,33 @@ export default function LoginPage() {
                   value={password}
                 />
               </div>
-              {error ? (
-                <div className="field field-wide">
+              <div className="field field-wide form-feedback-slot">
+                {error ? (
                   <div className="message-error">{error}</div>
-                </div>
-              ) : null}
+                ) : (
+                  <div aria-hidden="true" className="message-placeholder" />
+                )}
+              </div>
               <div className="field field-wide">
                 <button className="button button-primary" disabled={isSubmitting} type="submit">
                   {isSubmitting ? "Проверяем..." : "Войти"}
                 </button>
               </div>
             </form>
+
+            <div className="auth-page-footer">
+              <span className="table-muted">Нужен новый аккаунт?</span>
+              <Link className="button button-secondary" href="/register">
+                Открыть регистрацию
+              </Link>
+            </div>
           </article>
 
           <article className="card">
             <div className="section-head">
               <h2 className="section-title">Демо-аккаунты</h2>
-              <p className="section-subtitle">
-                Можно быстро заходить под разными ролями и проверять поведение интерфейса.
+              <p className="login-helper-copy">
+                Можно быстро зайти под разными ролями и проверить поведение интерфейса.
               </p>
             </div>
             <ul className="list">

@@ -363,7 +363,9 @@ export function MatchesClient() {
                   </option>
                 ))}
               </select>
-              {errors.matchId ? <span className="field-error">{errors.matchId}</span> : null}
+              <span className={`field-error${errors.matchId ? "" : " is-empty"}`}>
+                {errors.matchId || "\u00a0"}
+              </span>
             </div>
             <div className="field">
               <label htmlFor="status">Статус</label>
@@ -394,7 +396,9 @@ export function MatchesClient() {
                 type="number"
                 value={form.homeScore}
               />
-              {errors.homeScore ? <span className="field-error">{errors.homeScore}</span> : null}
+              <span className={`field-error${errors.homeScore ? "" : " is-empty"}`}>
+                {errors.homeScore || "\u00a0"}
+              </span>
             </div>
             <div className="field">
               <label htmlFor="away-score">Голы гостей</label>
@@ -408,7 +412,9 @@ export function MatchesClient() {
                 type="number"
                 value={form.awayScore}
               />
-              {errors.awayScore ? <span className="field-error">{errors.awayScore}</span> : null}
+              <span className={`field-error${errors.awayScore ? "" : " is-empty"}`}>
+                {errors.awayScore || "\u00a0"}
+              </span>
             </div>
             <div className="field">
               <label htmlFor="event-player">Игрок</label>
@@ -440,9 +446,9 @@ export function MatchesClient() {
                 type="number"
                 value={form.eventMinute}
               />
-              {errors.eventMinute ? (
-                <span className="field-error">{errors.eventMinute}</span>
-              ) : null}
+              <span className={`field-error${errors.eventMinute ? "" : " is-empty"}`}>
+                {errors.eventMinute || "\u00a0"}
+              </span>
             </div>
             <div className="field">
               <label htmlFor="event-type">Событие</label>
@@ -474,18 +480,19 @@ export function MatchesClient() {
                 placeholder="Например, данные проверены после матча"
                 value={form.comment}
               />
-              {errors.comment ? <span className="field-error">{errors.comment}</span> : null}
+              <span className={`field-error${errors.comment ? "" : " is-empty"}`}>
+                {errors.comment || "\u00a0"}
+              </span>
             </div>
-            {submitError ? (
-              <div className="field field-wide">
+            <div className="field field-wide form-feedback-slot">
+              {submitError ? (
                 <div className="message-error">{submitError}</div>
-              </div>
-            ) : null}
-            {success ? (
-              <div className="field field-wide">
+              ) : success ? (
                 <div className="message-success">{success}</div>
-              </div>
-            ) : null}
+              ) : (
+                <div aria-hidden="true" className="message-placeholder" />
+              )}
+            </div>
             <div className="field field-wide">
               <button className="button button-primary" disabled={!currentMatch} type="submit">
                 Сохранить результат

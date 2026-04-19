@@ -1,7 +1,9 @@
 import bcrypt from 'bcryptjs';
 import jwt, { SignOptions } from 'jsonwebtoken';
+import { Role } from '@prisma/client';
 import { prisma } from '../../common/prisma';
 import { config } from '../../config';
+import { NotificationService } from '../notifications/notification.service';
 
 export interface RegisterInput {
   email: string;
@@ -44,6 +46,21 @@ export class AuthService {
         role: 'VIEWER',
       },
     });
+
+    const displayName = user.name?.trim() || user.email;
+    await Promise.all([
+      NotificationService.createForUser(user.id, {
+        title: 'Добро пожаловать',
+        message:
+          'Аккаунт создан. Сейчас у вас роль "Игрок / Болельщик". Администратор может выдать расширенные права в панели ролей.',
+        kind: 'success',
+      }),
+      NotificationService.createForRoles([Role.ADMIN], {
+        title: 'Новая регистрация',
+        message: `Пользователь ${displayName} зарегистрировался в системе. При необходимости назначьте ему роль.`,
+        kind: 'info',
+      }),
+    ]);
 
     return {
       id: user.id,

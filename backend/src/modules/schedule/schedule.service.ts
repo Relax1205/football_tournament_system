@@ -52,10 +52,6 @@ export class ScheduleService {
       currentDate.setDate(currentDate.getDate() + daysBetweenRounds);
     }
 
-    await prisma.match.deleteMany({
-      where: { tournamentId },
-    });
-
     await prisma.match.createMany({
       data: pairings.map((pairing) => ({
         tournamentId,

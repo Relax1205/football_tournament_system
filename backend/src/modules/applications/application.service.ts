@@ -1,6 +1,13 @@
 import { ApplicationStatus, Role, TournamentStatus } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '../../common/prisma';
+import { NotificationService } from '../notifications/notification.service';
+
+const applicationStatusLabels: Record<ApplicationStatus, string> = {
+  APPROVED: 'одобрена',
+  PENDING: 'переведена в статус "На рассмотрении"',
+  REJECTED: 'отклонена',
+};
 
 export const createApplicationSchema = z.object({
   tournamentId: z.string().min(1),
@@ -48,7 +55,7 @@ export class ApplicationService {
       throw new Error('Applications are available only for tournaments with open registration');
     }
 
-    return prisma.application.create({
+    const application = await prisma.application.create({
       data: {
         tournamentId: payload.tournamentId,
         teamName: payload.teamName,
@@ -66,6 +73,14 @@ export class ApplicationService {
         },
       },
     });
+
+    await NotificationService.createForRoles([Role.ADMIN, Role.ORGANIZER], {
+      title: 'Новая заявка на турнир',
+      message: `Команда "${application.teamName}" подала заявку на турнир "${application.tournament.name}".`,
+      kind: 'info',
+    });
+
+    return application;
   }
 
   static async updateStatus(applicationId: string, status: ApplicationStatus) {
@@ -82,8 +97,10 @@ export class ApplicationService {
       throw new Error('Application not found');
     }
 
+    let updatedApplication;
+
     if (status !== ApplicationStatus.APPROVED || application.approvedTeamId) {
-      return prisma.application.update({
+      updatedApplication = await prisma.application.update({
         where: { id: applicationId },
         data: { status },
         include: {
@@ -95,40 +112,48 @@ export class ApplicationService {
           },
         },
       });
+    } else {
+      updatedApplication = await prisma.$transaction(async (transaction) => {
+        const existingTeam = await transaction.team.findFirst({
+          where: {
+            tournamentId: application.tournamentId,
+            name: application.teamName,
+          },
+        });
+
+        const team = existingTeam ?? await transaction.team.create({
+          data: {
+            tournamentId: application.tournamentId,
+            name: application.teamName,
+            city: application.city ?? undefined,
+            coachId: application.applicant.role === Role.COACH ? application.applicant.id : null,
+          },
+        });
+
+        return transaction.application.update({
+          where: { id: applicationId },
+          data: {
+            status,
+            approvedTeamId: team.id,
+          },
+          include: {
+            tournament: {
+              select: { id: true, name: true },
+            },
+            applicant: {
+              select: { id: true, email: true, name: true, role: true },
+            },
+          },
+        });
+      });
     }
 
-    return prisma.$transaction(async (transaction) => {
-      const existingTeam = await transaction.team.findFirst({
-        where: {
-          tournamentId: application.tournamentId,
-          name: application.teamName,
-        },
-      });
-
-      const team = existingTeam ?? await transaction.team.create({
-        data: {
-          tournamentId: application.tournamentId,
-          name: application.teamName,
-          city: application.city ?? undefined,
-          coachId: application.applicant.role === Role.COACH ? application.applicant.id : null,
-        },
-      });
-
-      return transaction.application.update({
-        where: { id: applicationId },
-        data: {
-          status,
-          approvedTeamId: team.id,
-        },
-        include: {
-          tournament: {
-            select: { id: true, name: true },
-          },
-          applicant: {
-            select: { id: true, email: true, name: true, role: true },
-          },
-        },
-      });
+    await NotificationService.createForUser(updatedApplication.applicant.id, {
+      title: 'Статус заявки обновлён',
+      message: `Заявка команды "${updatedApplication.teamName}" на турнир "${updatedApplication.tournament.name}" ${applicationStatusLabels[status]}.`,
+      kind: status === ApplicationStatus.REJECTED ? 'warning' : 'success',
     });
+
+    return updatedApplication;
   }
 }

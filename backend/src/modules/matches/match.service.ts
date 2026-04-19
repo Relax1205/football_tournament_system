@@ -1,6 +1,7 @@
-import { MatchStatus } from '@prisma/client';
+import { MatchStatus, Role } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '../../common/prisma';
+import { NotificationService } from '../notifications/notification.service';
 import { StandingsService } from '../standings/standings.service';
 
 export const createMatchSchema = z.object({
@@ -85,7 +86,11 @@ export class MatchService {
     });
   }
 
-  static async updateScore(matchId: string, input: z.infer<typeof updateScoreSchema>) {
+  static async updateScore(
+    matchId: string,
+    input: z.infer<typeof updateScoreSchema>,
+    actorUserId?: string,
+  ) {
     const payload = updateScoreSchema.parse(input);
 
     const match = await prisma.match.findUnique({
@@ -100,7 +105,7 @@ export class MatchService {
       throw new Error('Confirmed matches cannot be edited');
     }
 
-    return prisma.match.update({
+    const updatedMatch = await prisma.match.update({
       where: { id: matchId },
       data: {
         homeScore: payload.homeScore,
@@ -133,19 +138,40 @@ export class MatchService {
         },
       },
     });
+
+    const reviewers = await prisma.user.findMany({
+      where: {
+        role: {
+          in: [Role.ADMIN, Role.ORGANIZER],
+        },
+        ...(actorUserId ? { id: { not: actorUserId } } : {}),
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    await NotificationService.createForUsers(
+      reviewers.map((user) => user.id),
+      {
+        title: 'Результат матча ждёт подтверждения',
+        message: `Матч "${updatedMatch.homeTeam.name} - ${updatedMatch.awayTeam.name}" обновлён со счётом ${updatedMatch.homeScore}:${updatedMatch.awayScore}.`,
+        kind: 'info',
+      },
+    );
+
+    return updatedMatch;
   }
 
-  static async confirmMatch(matchId: string) {
-    const match = await prisma.match.update({
+  static async confirmMatch(matchId: string, actorUserId?: string) {
+    await prisma.match.update({
       where: { id: matchId },
       data: {
         status: MatchStatus.CONFIRMED,
       },
     });
 
-    await StandingsService.calculate(match.tournamentId);
-
-    return prisma.match.findUnique({
+    const confirmedMatch = await prisma.match.findUnique({
       where: { id: matchId },
       include: {
         homeTeam: {
@@ -173,6 +199,22 @@ export class MatchService {
         },
       },
     });
+
+    if (!confirmedMatch) {
+      throw new Error('Match not found');
+    }
+
+    await StandingsService.calculate(confirmedMatch.tournamentId);
+
+    if (confirmedMatch.referee?.id && confirmedMatch.referee.id !== actorUserId) {
+      await NotificationService.createForUser(confirmedMatch.referee.id, {
+        title: 'Результат подтверждён',
+        message: `Организатор подтвердил результат матча "${confirmedMatch.homeTeam.name} - ${confirmedMatch.awayTeam.name}". Итоговый счёт: ${confirmedMatch.homeScore}:${confirmedMatch.awayScore}.`,
+        kind: 'success',
+      });
+    }
+
+    return confirmedMatch;
   }
 
   static async delete(matchId: string) {

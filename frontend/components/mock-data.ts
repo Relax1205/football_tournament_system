@@ -129,6 +129,17 @@ export type TeamRecord = {
   }>;
 };
 
+export type NotificationKind = "info" | "success" | "warning";
+
+export type NotificationRecord = {
+  id: string;
+  title: string;
+  message: string;
+  kind: NotificationKind;
+  isRead: boolean;
+  createdAt: string;
+};
+
 export const roleLabels: Record<UserRole, string> = {
   admin: "Администратор",
   organizer: "Организатор",
