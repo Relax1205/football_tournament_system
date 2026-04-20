@@ -1,0 +1,13 @@
+{
+  "entryPoints": ["src/**/*.ts"],
+  "out": "docs",
+  "exclude": ["**/*.spec.ts", "**/node_modules/**", "**/dist/**", "**/test-e2e.ts"],
+  "tsconfig": "tsconfig.json",
+  "readme": "none",
+  "name": "Football Tournament Backend API",
+  "includeVersion": true,
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "excludeExternals": true,
+  "categorizeByGroup": true
+}
